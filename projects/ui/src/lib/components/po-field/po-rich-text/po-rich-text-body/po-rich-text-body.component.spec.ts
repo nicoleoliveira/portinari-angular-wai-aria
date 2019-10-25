@@ -132,42 +132,41 @@ describe('PoRichTextBodyComponent:', () => {
       expect(component['emitSelectionCommands']).toHaveBeenCalled();
     });
 
-    it('onKeyUp: should remove tag `br`', () => {
-      const element = document.createElement('br');
-      element.classList.add('teste');
-      component.bodyElement.nativeElement.appendChild(element);
-      component.onKeyUp();
-      expect(nativeElement.querySelector('.teste')).toBeFalsy();
-    });
-
-    it('onKeyUp: should`t remove tag `br`', () => {
-      const div = document.createElement('div');
-      const br = document.createElement('br');
-
-      br.classList.add('teste-br');
-      div.classList.add('teste-div');
-
-      component.bodyElement.nativeElement.appendChild(div);
-      component.bodyElement.nativeElement.appendChild(br);
-
-      component.onKeyUp();
-
-      expect(nativeElement.querySelector('.teste-br')).toBeTruthy();
-      expect(nativeElement.querySelector('.teste-div')).toBeTruthy();
-    });
-
-    it('onKeyUp: should call `updateModel`', () => {
-      spyOn(component, <any>'updateModel');
-      component.onKeyUp();
-
-      expect(component['updateModel']).toHaveBeenCalled();
-    });
-
-    it('onKeyUp: should call `emitSelectionCommands`', () => {
+    it('onKeyUp: should call `toggleCursorOnLink` with `event` and `remove` before `updateModel`', () => {
+      spyOn(component, <any>'toggleCursorOnLink');
+      const updateModelSpy = spyOn(component, <any>'updateModel');
+      spyOn(component, <any>'removeBrElement');
       spyOn(component, <any>'emitSelectionCommands');
-      component.onKeyUp();
 
+      const event = { metaKey: true };
+
+      component.onKeyUp(event);
+
+      expect(component['toggleCursorOnLink']).toHaveBeenCalledBefore(updateModelSpy);
+    });
+
+    it('onKeyUp: should call `removeBrElement` and `emitSelectionCommands`', () => {
+      spyOn(component, <any>'toggleCursorOnLink');
+      spyOn(component, <any>'updateModel');
+      spyOn(component, <any>'removeBrElement');
+      spyOn(component, <any>'emitSelectionCommands');
+
+      const event = { metaKey: true };
+
+      component.onKeyUp(event);
+
+      expect(component['removeBrElement']).toHaveBeenCalled();
       expect(component['emitSelectionCommands']).toHaveBeenCalled();
+    });
+
+    it('onPaste: should call `addClickListenerOnAnchorElements` and `update`', () => {
+      spyOn(component, <any>'addClickListenerOnAnchorElements');
+      spyOn(component, <any>'update');
+
+      component.onPaste();
+
+      expect(component['addClickListenerOnAnchorElements']).toHaveBeenCalled();
+      expect(component['update']).toHaveBeenCalled();
     });
 
     it('onKeyDown: should call `event.preventDefault` and `shortcutCommand.emit` if keyCode is `76` and ctrlKey is `true`', () => {
@@ -179,11 +178,24 @@ describe('PoRichTextBodyComponent:', () => {
 
       spyOn(component.shortcutCommand, 'emit');
       spyOn(fakeEvent, 'preventDefault');
+      spyOn(component, <any>'toggleCursorOnLink');
 
       component.onKeyDown(fakeEvent);
 
       expect(fakeEvent.preventDefault).toHaveBeenCalled();
       expect(component.shortcutCommand.emit).toHaveBeenCalled();
+    });
+
+    it('onKeyDown: should call `toggleCursorOnLink` with `event` and `add`', () => {
+      const fakeEvent = {
+        ctrlKey: false
+      };
+
+      spyOn(component, <any>'toggleCursorOnLink');
+
+      component.onKeyDown(fakeEvent);
+
+      expect(component['toggleCursorOnLink']).toHaveBeenCalledWith(fakeEvent, 'add');
     });
 
     it('onKeyDown: should call `event.preventDefault` and `shortcutCommand.emit` if keyCode is `76` and metaKey is `true`', () => {
@@ -195,6 +207,7 @@ describe('PoRichTextBodyComponent:', () => {
 
       spyOn(component.shortcutCommand, 'emit');
       spyOn(fakeEvent, 'preventDefault');
+      spyOn(component, <any>'toggleCursorOnLink');
 
       component.onKeyDown(fakeEvent);
 
@@ -211,6 +224,7 @@ describe('PoRichTextBodyComponent:', () => {
 
       spyOn(component.shortcutCommand, 'emit');
       spyOn(fakeEvent, 'preventDefault');
+      spyOn(component, <any>'toggleCursorOnLink');
 
       component.onKeyDown(fakeEvent);
 
@@ -227,11 +241,31 @@ describe('PoRichTextBodyComponent:', () => {
 
       spyOn(component.shortcutCommand, 'emit');
       spyOn(fakeEvent, 'preventDefault');
+      spyOn(component, <any>'toggleCursorOnLink');
 
       component.onKeyDown(fakeEvent);
 
       expect(fakeEvent.preventDefault).not.toHaveBeenCalled();
       expect(component.shortcutCommand.emit).not.toHaveBeenCalled();
+    });
+
+    it(`addClickListenerOnAnchorElements: should call 'addEventListener' with 'click' and 'onAnchorClick'
+      based on the amount of anchor elements`, () => {
+
+      const spyListener = jasmine.createSpy('addEventListener');
+
+      const anchors = [
+        { parentNode: `<a>link1</a>`, addEventListener: spyListener },
+        { parentNode: `<a>link2</a>`, addEventListener: spyListener },
+        { parentNode: `<a>link3</a>`, addEventListener: spyListener },
+      ];
+
+      spyOn(component.bodyElement.nativeElement, 'querySelectorAll').and.returnValue(<any>anchors);
+
+      component['addClickListenerOnAnchorElements']();
+
+      expect(spyListener).toHaveBeenCalledTimes(anchors.length);
+      expect(spyListener).toHaveBeenCalledWith('click', component['onAnchorClick']);
     });
 
     it('cursorPositionedInALink: should return true if tag element is a link', () => {
@@ -256,6 +290,8 @@ describe('PoRichTextBodyComponent:', () => {
 
     it('update: should call `updateModel`', fakeAsync(() => {
       spyOn(component, <any>'updateModel');
+      spyOn(component, <any>'removeBrElement');
+      spyOn(component, <any>'emitSelectionCommands');
 
       component.update();
       tick(50);
@@ -263,17 +299,22 @@ describe('PoRichTextBodyComponent:', () => {
       expect(component['updateModel']).toHaveBeenCalled();
     }));
 
-    it('update: should call `onKeyUp`', fakeAsync(() => {
-      spyOn(component, <any>'onKeyUp');
+    it('update: should call `removeBrElement` and `emitSelectionCommands`', fakeAsync(() => {
+      spyOn(component, <any>'updateModel');
+      spyOn(component, <any>'removeBrElement');
+      spyOn(component, <any>'emitSelectionCommands');
 
       component.update();
       tick(50);
 
-      expect(component['onKeyUp']).toHaveBeenCalled();
+      expect(component['removeBrElement']).toHaveBeenCalled();
+      expect(component['emitSelectionCommands']).toHaveBeenCalled();
     }));
 
     it('emitSelectionCommands: should call `commands.emit`', () => {
       spyOn(component.commands, 'emit');
+      spyOn(component, <any>'cursorPositionedInALink');
+
       component['emitSelectionCommands']();
 
       expect(component.commands.emit).toHaveBeenCalled();
@@ -359,6 +400,14 @@ describe('PoRichTextBodyComponent:', () => {
       expect(document.execCommand).toHaveBeenCalledWith(fakeValue.command, false, linkValue);
     });
 
+    it('handleCommandLink: should call `addClickListenerOnAnchorElements`', () => {
+      spyOn(component, <any>'addClickListenerOnAnchorElements');
+
+      component['handleCommandLink']('CreateLink', 'link text', 'link url');
+
+      expect(component['addClickListenerOnAnchorElements']).toHaveBeenCalled();
+    });
+
     it('updateModel: should update `modelValue`', () => {
       component.bodyElement.nativeElement.innerHTML = 'teste';
       component['updateModel']();
@@ -398,6 +447,249 @@ describe('PoRichTextBodyComponent:', () => {
       const result = component['rgbToHex'](rbg);
 
       expect(result).toBe(hex);
+    });
+
+    it('toggleCursorOnLink: should call remove of classList if `action` is remove, `element` is `anchor` and `key` is `ctrl`', () => {
+      const event = { ctrlKey: true };
+
+      const removeSpy = jasmine.createSpy('remove');
+
+      spyOn(document , 'getSelection').and.returnValue(<any>{
+        focusNode : {
+          parentNode: {
+            nodeName: 'A',
+            classList: {
+              remove: removeSpy
+            }
+          }
+        }
+      });
+
+      component['toggleCursorOnLink'](event, 'remove');
+
+      expect(removeSpy).toHaveBeenCalledWith('po-clickable');
+    });
+
+    it('toggleCursorOnLink: should call add of classList if `action` is add, `element` is `anchor` and `key` is `ctrl`', () => {
+      const event = { ctrlKey: true };
+
+      const addSpy = jasmine.createSpy('add');
+
+      spyOn(document , 'getSelection').and.returnValue(<any>{
+        focusNode : {
+          parentNode: {
+            nodeName: 'A',
+            classList: {
+              add: addSpy
+            }
+          }
+        }
+      });
+
+      component['toggleCursorOnLink'](event, 'add');
+
+      expect(addSpy).toHaveBeenCalledWith('po-clickable');
+    });
+
+    it('toggleCursorOnLink: should call add of classList if `action` is add, `element` is `anchor` and `key` is `metaKey`', () => {
+      const event = { metaKey: true };
+
+      const addSpy = jasmine.createSpy('add');
+
+      spyOn(document , 'getSelection').and.returnValue(<any>{
+        focusNode : {
+          parentNode: {
+            nodeName: 'A',
+            classList: {
+              add: addSpy
+            }
+          }
+        }
+      });
+
+      component['toggleCursorOnLink'](event, 'add');
+
+      expect(addSpy).toHaveBeenCalledWith('po-clickable');
+    });
+
+    it('toggleCursorOnLink: should call add of classList if `action` is add, `element` is `anchor` and `key` is `Control`', () => {
+      const event = { key: 'Control' };
+
+      const addSpy = jasmine.createSpy('add');
+
+      spyOn(document , 'getSelection').and.returnValue(<any>{
+        focusNode : {
+          parentNode: {
+            nodeName: 'A',
+            classList: {
+              add: addSpy
+            }
+          }
+        }
+      });
+
+      component['toggleCursorOnLink'](event, 'add');
+
+      expect(addSpy).toHaveBeenCalledWith('po-clickable');
+    });
+
+    it(`toggleCursorOnLink: shouldn't call add or remove of classList if 'element' not is 'anchor'`, () => {
+
+      const event = { key: 'Control' };
+
+      const addSpy = jasmine.createSpy('add');
+      const removeSpy = jasmine.createSpy('remove');
+
+      spyOn(document , 'getSelection').and.returnValue(<any>{
+        focusNode : {
+          parentNode: {
+            nodeName: 'DIV',
+            classList: {
+              add: addSpy,
+              remove: removeSpy
+            }
+          }
+        }
+      });
+
+      component['toggleCursorOnLink'](event, 'add');
+
+      expect(addSpy).not.toHaveBeenCalled();
+      expect(removeSpy).not.toHaveBeenCalled();
+
+      component['toggleCursorOnLink'](event, 'remove');
+
+      expect(addSpy).not.toHaveBeenCalled();
+      expect(removeSpy).not.toHaveBeenCalled();
+    });
+
+    it(`toggleCursorOnLink: shouldn't call add or remove of classList if 'key' not is 'ctrl' or 'metaKey'`, () => {
+
+      const event = { key: 'enter' };
+
+      const addSpy = jasmine.createSpy('add');
+      const removeSpy = jasmine.createSpy('remove');
+
+      spyOn(document , 'getSelection').and.returnValue(<any>{
+        focusNode : {
+          parentNode: {
+            nodeName: 'A',
+            classList: {
+              add: addSpy,
+              remove: removeSpy
+            }
+          }
+        }
+      });
+
+      component['toggleCursorOnLink'](event, 'remove');
+
+      expect(addSpy).not.toHaveBeenCalled();
+      expect(removeSpy).not.toHaveBeenCalled();
+
+      component['toggleCursorOnLink'](event, 'add');
+
+      expect(addSpy).not.toHaveBeenCalled();
+      expect(removeSpy).not.toHaveBeenCalled();
+    });
+
+    it('onAnchorClick: should `openExternalLink` with url if key is `ctrlKey`', () => {
+      const url = 'http://test.com';
+
+      const event = {
+        ctrlKey: 'true',
+        target: {
+          attributes: { href: { value: url } },
+          classList: { remove: () => {} }
+        }
+      };
+
+      spyOn(UtilsFunction, 'openExternalLink');
+
+      component['onAnchorClick'](event);
+
+      expect(UtilsFunction.openExternalLink).toHaveBeenCalledWith(url);
+    });
+
+    it('onAnchorClick: should remove `po-clickable` if key is `ctrlKey`', () => {
+      const url = 'http://test.com';
+
+      const event = {
+        ctrlKey: 'true',
+        target: {
+          attributes: { href: { value: url } },
+          classList: { remove: () => {} }
+        }
+      };
+
+      spyOn(UtilsFunction, 'openExternalLink');
+      spyOn(event.target.classList, 'remove');
+
+      component['onAnchorClick'](event);
+
+      expect(event.target.classList.remove).toHaveBeenCalledWith('po-clickable');
+    });
+
+    it('onAnchorClick: should `openExternalLink` with url if key is `metaKey`', () => {
+      const url = 'http://test.com';
+
+      const event = {
+        metaKey: 'true',
+        target: {
+          attributes: { href: { value: url } },
+          classList: { remove: () => {} }
+        }
+      };
+
+      spyOn(UtilsFunction, 'openExternalLink');
+
+      component['onAnchorClick'](event);
+
+      expect(UtilsFunction.openExternalLink).toHaveBeenCalledWith(url);
+    });
+
+    it('onAnchorClick: shouldn`t `openExternalLink` if key not is ctrlKey or metaKey', () => {
+      const url = 'http://test.com';
+
+      const event = {
+        enter: 'true',
+        target: {
+          attributes: { href: { value: url } }
+        }
+      };
+
+      spyOn(UtilsFunction, 'openExternalLink');
+
+      component['onAnchorClick'](event);
+
+      expect(UtilsFunction.openExternalLink).not.toHaveBeenCalled();
+    });
+
+    it('removeBrElement: should remove tag `br`', () => {
+      const element = document.createElement('br');
+      element.classList.add('teste');
+
+      component.bodyElement.nativeElement.appendChild(element);
+
+      component['removeBrElement']();
+
+      expect(nativeElement.querySelector('.teste')).toBeFalsy();
+    });
+
+    it('removeBrElement: should`t remove tag `br`', () => {
+      const div = document.createElement('div');
+      const br = document.createElement('br');
+
+      br.classList.add('teste-br');
+      div.classList.add('teste-div');
+
+      component.bodyElement.nativeElement.appendChild(div);
+      component.bodyElement.nativeElement.appendChild(br);
+
+      component['removeBrElement']();
+
+      expect(nativeElement.querySelector('.teste-br')).toBeTruthy();
+      expect(nativeElement.querySelector('.teste-div')).toBeTruthy();
     });
 
     it('onBlur: should emit modelValue change', fakeAsync((): void => {

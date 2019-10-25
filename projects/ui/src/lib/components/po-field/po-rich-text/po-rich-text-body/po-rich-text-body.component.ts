@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 
-import { isIE } from './../../../../utils/util';
+import { isIE, openExternalLink } from './../../../../utils/util';
 import { PoKeyCodeEnum } from './../../../../enums/po-key-code.enum';
 
 const poRichTextBodyCommands = [
@@ -84,28 +84,44 @@ export class PoRichTextBodyComponent implements OnInit {
 
   onKeyDown(event) {
     const keyL = event.keyCode === PoKeyCodeEnum.keyL;
+    const isLinkShortcut = keyL && event.ctrlKey || keyL && event.metaKey;
 
-    if (keyL && event.ctrlKey || keyL && event.metaKey) {
+    if (isLinkShortcut) {
       event.preventDefault();
       this.shortcutCommand.emit();
     }
+
+    this.toggleCursorOnLink(event, 'add');
   }
 
-  onKeyUp() {
-    // Tratamento necessário para eliminar a tag <br> criada no firefox quando o body for limpo.
-    const bodyElement = this.bodyElement.nativeElement;
+  onKeyUp(event: any) {
+    this.toggleCursorOnLink(event, 'remove');
 
-    if (!bodyElement.innerText.trim() && bodyElement.childNodes.length === 1 && bodyElement.querySelector('br')) {
-      bodyElement.querySelector('br').remove();
-    }
-
+    this.removeBrElement();
     this.updateModel();
     this.emitSelectionCommands();
   }
 
+  onPaste() {
+    this.addClickListenerOnAnchorElements();
+    this.update();
+  }
+
   update() {
     setTimeout(() => this.updateModel());
-    setTimeout(() => this.onKeyUp());
+
+    setTimeout(() => {
+      this.removeBrElement();
+      this.updateModel();
+      this.emitSelectionCommands();
+    });
+  }
+
+  private addClickListenerOnAnchorElements() {
+    this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
+
+      element.addEventListener('click', this.onAnchorClick);
+    });
   }
 
   private cursorPositionedInALink() {
@@ -135,6 +151,8 @@ export class PoRichTextBodyComponent implements OnInit {
 
       document.execCommand(linkCommand, false, linkValue);
     }
+
+    this.addClickListenerOnAnchorElements();
   }
 
   // tratamento específico para IE pois não suporta o comando 'insertHTML'.
@@ -151,6 +169,26 @@ export class PoRichTextBodyComponent implements OnInit {
 
     selectionRange.deleteContents();
     selectionRange.insertNode(elementLink);
+  }
+
+  private onAnchorClick = event => {
+    const { target, ctrlKey, metaKey } = event;
+
+    if (ctrlKey || metaKey) {
+      const url = target.attributes.href.value;
+
+      openExternalLink(url);
+      target.classList.remove('po-clickable');
+    }
+  }
+
+  // Tratamento necessário para eliminar a tag <br> criada no firefox quando o body for limpo.
+  private removeBrElement() {
+    const bodyElement = this.bodyElement.nativeElement;
+
+    if (!bodyElement.innerText.trim() && bodyElement.childNodes.length === 1 && bodyElement.querySelector('br')) {
+      bodyElement.querySelector('br').remove();
+    }
   }
 
   private rgbToHex(rgb) {
@@ -173,6 +211,20 @@ export class PoRichTextBodyComponent implements OnInit {
     }
 
     return '#' + r + g + b;
+  }
+
+  private toggleCursorOnLink(event: any, action: 'add' | 'remove') {
+    const element = document.getSelection().focusNode.parentNode;
+
+    const isCtrl = event.ctrlKey || event.key === 'Control';
+    const isCommand = event.metaKey;
+
+    const isOnCtrlLink = element.nodeName === 'A' && (isCtrl || isCommand);
+
+    if (isOnCtrlLink) {
+      element['classList'][action]('po-clickable');
+    }
+
   }
 
   private updateModel() {

@@ -125,59 +125,64 @@ describe('PoRichTextModalComponent:', () => {
       expect(component.insertElementRef).toHaveBeenCalled();
     });
 
-    it('modalConfirmAction: should call toInsertLink', () => {
+    it('modalConfirmAction: should call `toInsertLink` if `isLinkEditing` is false', () => {
       spyOn(component, <any>'toInsertLink');
+      spyOn(component, <any>'toEditLink');
+
+      component['isLinkEditing'] = false;
 
       component.modalLinkConfirmAction.action();
 
+      expect(component['toEditLink']).not.toHaveBeenCalled();
       expect(component['toInsertLink']).toHaveBeenCalled();
+    });
+
+    it('modalConfirmAction: should call `toEditLink` if `isLinkEditing` is true', () => {
+      spyOn(component, <any>'toInsertLink');
+      spyOn(component, <any>'toEditLink');
+
+      component['isLinkEditing'] = true;
+
+      component.modalLinkConfirmAction.action();
+
+      expect(component['toInsertLink']).not.toHaveBeenCalled();
+      expect(component['toEditLink']).toHaveBeenCalled();
     });
 
   });
 
   describe('Methods:', () => {
 
-    it(`openModal: should call 'modal.open'`, () => {
+    it(`openModal: should call 'modal.open' and 'saveCursorPosition'`, () => {
       const fakeType = PoRichTextModalType.Image;
 
       spyOn(component.modal, 'open');
-      spyOn(component, <any>'formModelValidate');
+      spyOn(component, <any>'saveCursorPosition');
 
       component.openModal(fakeType);
 
       expect(component.modal.open).toHaveBeenCalled();
-    });
-
-    it('should call `saveCursorPosition` if modalType is `image`', () => {
-      const fakeType = PoRichTextModalType.Image;
-
-      spyOn(component, <any>'saveCursorPosition');
-      spyOn(component, <any>'saveSelectionTextRange');
-      spyOn(component, <any>'formModelValidate');
-      spyOn(component, <any>'formReset');
-
-      component.openModal(fakeType);
-
       expect(component['saveCursorPosition']).toHaveBeenCalled();
-      expect(component['saveSelectionTextRange']).not.toHaveBeenCalled();
-      expect(component['formModelValidate']).not.toHaveBeenCalled();
-      expect(component['formReset']).not.toHaveBeenCalled();
     });
 
-    it('should call `saveSelectionTextRange`, `formModelValidate` and `formReset` if modalType is `link`', () => {
+    it('openModal: should call `prepareModalForLink` if modalType is `Link`', () => {
       const fakeType = PoRichTextModalType.Link;
 
-      spyOn(component, <any>'saveCursorPosition');
-      spyOn(component, <any>'saveSelectionTextRange');
-      spyOn(component, <any>'formReset');
-      spyOn(component, <any>'formModelValidate');
+      spyOn(component, <any>'prepareModalForLink');
 
       component.openModal(fakeType);
 
-      expect(component['saveSelectionTextRange']).toHaveBeenCalled();
-      expect(component['formModelValidate']).toHaveBeenCalled();
-      expect(component['formReset']).toHaveBeenCalledWith(component.modalLinkForm.control);
-      expect(component['saveCursorPosition']).not.toHaveBeenCalled();
+      expect(component['prepareModalForLink']).toHaveBeenCalled();
+    });
+
+    it('openModal: shouldn`t call `prepareModalForLink` if modalType not is `Link`', () => {
+      const fakeType = PoRichTextModalType.Image;
+
+      spyOn(component, <any>'prepareModalForLink');
+
+      component.openModal(fakeType);
+
+      expect(component['prepareModalForLink']).not.toHaveBeenCalled();
     });
 
     it(`convertToBase64: should call 'convertImageToBase64'.`, async () => {
@@ -361,6 +366,7 @@ describe('PoRichTextModalComponent:', () => {
 
     it('toInsertLink: should call `checkIfIsEmpty` and `command.emit`', () => {
       const urlLink = 'urlLink';
+      const urlAsExternalLink = 'http://urlLink';
       const urlLinkText = 'url link text';
 
       spyOn(component, <any>'checkIfIsEmpty').and.callThrough();
@@ -369,7 +375,35 @@ describe('PoRichTextModalComponent:', () => {
       component['toInsertLink'](urlLink, urlLinkText);
 
       expect(component['checkIfIsEmpty']).toHaveBeenCalled();
-      expect(component.command.emit).toHaveBeenCalledWith({command: 'InsertHTML', value: { urlLink: urlLink, urlLinkText: urlLinkText } });
+      expect(component.command.emit)
+        .toHaveBeenCalledWith({command: 'InsertHTML', value: { urlLink: urlAsExternalLink, urlLinkText: urlLinkText } });
+    });
+
+    it('toInsertLink: should call `command.emit` with `urlAsExternalLink` if `urlLink` not contains `http://`', () => {
+      const urlLink = 'urlLink';
+      const urlAsExternalLink = 'http://urlLink';
+      const urlLinkText = 'url link text';
+
+      spyOn(component, <any>'checkIfIsEmpty').and.returnValue(urlLinkText);
+      spyOn(component.command, 'emit');
+
+      component['toInsertLink'](urlLink, urlLinkText);
+
+      expect(component.command.emit)
+        .toHaveBeenCalledWith({command: 'InsertHTML', value: { urlLink: urlAsExternalLink, urlLinkText: urlLinkText } });
+    });
+
+    it('toInsertLink: should call `command.emit` with `urlLink` if `urlLink` contains `http://`', () => {
+      const urlLink = 'http://urlLink';
+      const urlLinkText = 'url link text';
+
+      spyOn(component, <any>'checkIfIsEmpty').and.returnValue(urlLinkText);
+      spyOn(component.command, 'emit');
+
+      component['toInsertLink'](urlLink, urlLinkText);
+
+      expect(component.command.emit)
+        .toHaveBeenCalledWith({command: 'InsertHTML', value: { urlLink: urlLink, urlLinkText: urlLinkText } });
     });
 
     it('formModelValidate: should apply `true` to `modalLinkForm.disabled` if `modalLinkForm.invalid` is `true`', () => {
@@ -522,6 +556,140 @@ describe('PoRichTextModalComponent:', () => {
       expect(fakeControl.markAsPristine).toHaveBeenCalled();
       expect(fakeControl.markAsUntouched).toHaveBeenCalled();
       expect(fakeControl.updateValueAndValidity).toHaveBeenCalled();
+    });
+
+    it('isLinkElement: should return true if `element` is an anchor', () => {
+      const element = {
+        parentNode: {
+          nodeName: 'A'
+        }
+      };
+
+      expect(component['isLinkElement'](element)).toBe(true);
+    });
+
+    it('isLinkElement: should return false if `element` not is an anchor', () => {
+      const element = {
+        parentNode: {
+          nodeName: 'DIV'
+        }
+      };
+
+      expect(component['isLinkElement'](element)).toBe(false);
+    });
+
+    it('isLinkElement: should return false if `parentNode` is undefined', () => {
+      const element = {
+        parentNode: undefined
+      };
+
+      expect(component['isLinkElement'](element)).toBe(false);
+    });
+
+    it('isLinkElement: should return false if `element` is undefined', () => {
+      const element = undefined;
+
+      expect(component['isLinkElement'](element)).toBe(false);
+    });
+
+    it('prepareModalForLink: should call `saveSelectionTextRange`, `formModelValidate` and `formReset`', () => {
+      spyOn(component, <any>'saveSelectionTextRange');
+      spyOn(component, <any>'formReset');
+      spyOn(component, <any>'formModelValidate');
+      spyOn(component, <any>'isLinkElement');
+
+      component.savedCursorPosition = [ '<a href="">link</a>' ];
+
+      component['prepareModalForLink']();
+
+      expect(component['saveSelectionTextRange']).toHaveBeenCalled();
+      expect(component['formModelValidate']).toHaveBeenCalled();
+      expect(component['formReset']).toHaveBeenCalledWith(component.modalLinkForm.control);
+    });
+
+    it('prepareModalForLink: should call `setLinkEditableForModal` and set `isLinkEditing` to true if `isLinkElement` return true', () => {
+      spyOn(component, <any>'saveSelectionTextRange');
+      spyOn(component, <any>'formReset');
+      spyOn(component, <any>'formModelValidate');
+
+      spyOn(component, <any>'setLinkEditableForModal');
+      spyOn(component, <any>'isLinkElement').and.returnValue(true);
+
+      component.savedCursorPosition = [ '<a href="">link</a>' ];
+
+      component['prepareModalForLink']();
+
+      expect(component['isLinkElement']).toHaveBeenCalledWith(component.savedCursorPosition[0]);
+      expect(component['setLinkEditableForModal']).toHaveBeenCalled();
+      expect(component['isLinkEditing']).toBe(true);
+    });
+
+    it(`prepareModalForLink: shouldn't call 'setLinkEditableForModal' and set 'isLinkEditing' to true
+      if 'isLinkElement' return false`, () => {
+      spyOn(component, <any>'saveSelectionTextRange');
+      spyOn(component, <any>'formReset');
+      spyOn(component, <any>'formModelValidate');
+
+      spyOn(component, <any>'setLinkEditableForModal');
+      spyOn(component, <any>'isLinkElement').and.returnValue(false);
+
+      component['isLinkEditing'] = false;
+      component.savedCursorPosition = [ '<a href="">link</a>' ];
+
+      component['prepareModalForLink']();
+
+      expect(component['setLinkEditableForModal']).not.toHaveBeenCalled();
+      expect(component['isLinkEditing']).toBe(false);
+    });
+
+    it('setLinkEditableForModal: should set `urlLinkText` with text inner element seleted and `url` with href', () => {
+      component.savedCursorPosition = [{
+        parentNode: {
+          innerText: 'link text',
+          getAttribute: () => {}
+        }
+      }];
+
+      spyOn(component.savedCursorPosition[0].parentNode, 'getAttribute')
+        .and.returnValue('test.com');
+
+      component['setLinkEditableForModal']();
+
+      expect(component.urlLinkText).toBe('link text');
+      expect(component.urlLink).toBe('test.com');
+    });
+
+    it('toEditLink: should call `remove` of `savedCursorPosition[0]`', () => {
+      component.savedCursorPosition = [{
+        parentNode: {
+          remove: () => {}
+        }
+      }];
+
+      spyOn(component.savedCursorPosition[0].parentNode, 'remove');
+
+      component['toEditLink']();
+
+      expect(component.savedCursorPosition[0].parentNode.remove).toHaveBeenCalled();
+    });
+
+    it('toEditLink: should call `toInsertLink` with `urlLink` and `urlLinkText`', () => {
+      component.savedCursorPosition = [{
+        parentNode: { remove: () => {} }
+      }];
+
+      spyOn(component.savedCursorPosition[0].parentNode, 'remove');
+      spyOn(component, <any>'toInsertLink');
+
+      const linkText = 'link text';
+      const link = 'link.com';
+
+      component.urlLinkText = linkText;
+      component.urlLink = link;
+
+      component['toEditLink']();
+
+      expect(component['toInsertLink']).toHaveBeenCalledWith(link, linkText);
     });
 
   });

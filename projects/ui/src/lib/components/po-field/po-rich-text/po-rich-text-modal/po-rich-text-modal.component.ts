@@ -1,7 +1,7 @@
 import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 import { AbstractControl, NgForm } from '@angular/forms';
 
-import { convertImageToBase64 } from '../../../../utils/util';
+import { convertImageToBase64, isExternalLink } from '../../../../utils/util';
 import { PoLanguageService } from './../../../../services/po-language/po-language.service';
 
 import { PoModalAction, PoModalComponent } from '../../../po-modal';
@@ -18,6 +18,7 @@ const uploadRestrictions = ['.apng', '.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.
 })
 export class PoRichTextModalComponent {
 
+  isLinkEditing: boolean;
   modalType: PoRichTextModalType;
   savedCursorPosition;
   selection = document.getSelection();
@@ -52,7 +53,7 @@ export class PoRichTextModalComponent {
   modalLinkConfirmAction = {
     label: this.literals.insertLink,
     disabled: true,
-    action: () => this.toInsertLink(this.urlLink, this.urlLinkText)
+    action: () => this.isLinkEditing ? this.toEditLink() : this.toInsertLink(this.urlLink, this.urlLinkText)
   };
 
   get modalTitle(): string {
@@ -126,12 +127,10 @@ export class PoRichTextModalComponent {
   openModal(type: PoRichTextModalType) {
     this.modalType = type;
 
-    if (this.modalType === PoRichTextModalType.Image) {
-      this.saveCursorPosition();
-    } else {
-      this.saveSelectionTextRange();
-      this.formReset(this.modalLinkForm.control);
-      this.formModelValidate();
+    this.saveCursorPosition();
+
+    if (this.modalType === PoRichTextModalType.Link) {
+      this.prepareModalForLink();
     }
 
     this.modal.open();
@@ -146,12 +145,31 @@ export class PoRichTextModalComponent {
     this.urlLink = undefined;
     this.urlLinkText = undefined;
     this.uploadModel = undefined;
+    this.isLinkEditing = false;
   }
 
   private formReset(control: AbstractControl) {
     control.markAsPristine();
     control.markAsUntouched();
     control.updateValueAndValidity();
+  }
+
+  private isLinkElement(element: any): boolean {
+    return !!element && !!element.parentNode && element.parentNode.nodeName === 'A';
+  }
+
+  private prepareModalForLink() {
+    this.saveSelectionTextRange();
+    this.formReset(this.modalLinkForm.control);
+    this.formModelValidate();
+
+    const isLinkElement = this.isLinkElement(this.savedCursorPosition[0]);
+
+    if (isLinkElement) {
+      this.setLinkEditableForModal();
+      this.isLinkEditing = true;
+    }
+
   }
 
   private restoreSelection() {
@@ -183,13 +201,28 @@ export class PoRichTextModalComponent {
     }
   }
 
+  private setLinkEditableForModal() {
+    this.urlLinkText = this.savedCursorPosition[0].parentNode.innerText;
+    this.urlLink = this.savedCursorPosition[0].parentNode.getAttribute('href');
+  }
+
+  private toEditLink() {
+    const linkElement = this.savedCursorPosition[0].parentNode;
+    linkElement.remove();
+
+    this.toInsertLink(this.urlLink, this.urlLinkText);
+  }
+
   private toInsertLink(urlLink, urlLinkText) {
     this.modal.close();
     this.restoreSelection();
 
     const urlLinkTextValue = this.checkIfIsEmpty(urlLink, urlLinkText);
+    const urlAsExternalLink = isExternalLink(urlLink) ? urlLink : `http://${urlLink}`;
+
     const command: string = 'InsertHTML';
-    const value = { urlLink: urlLink, urlLinkText: urlLinkTextValue };
+
+    const value = { urlLink: urlAsExternalLink, urlLinkText: urlLinkTextValue };
 
     this.command.emit({ command, value });
 

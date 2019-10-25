@@ -52,9 +52,9 @@
         name="urlLink"
         [(ngModel)]="urlLink"
         p-label="Link"
-        p-required
         [p-help]="literals.linkUrlTextHelper"
         [p-placeholder]="literals.linkUrlTextPlaceholder"
+        [p-required]="!isLinkEditing"
         (p-change-model)="formModelValidate()">
       </po-url>
     </div>
