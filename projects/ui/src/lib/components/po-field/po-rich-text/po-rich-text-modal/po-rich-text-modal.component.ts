@@ -18,6 +18,7 @@ const uploadRestrictions = ['.apng', '.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.
 })
 export class PoRichTextModalComponent {
 
+  linkElement;
   isLinkEditing: boolean;
   modalType: PoRichTextModalType;
   savedCursorPosition;
@@ -51,13 +52,17 @@ export class PoRichTextModalComponent {
   };
 
   modalLinkConfirmAction = {
-    label: this.literals.insertLink,
+    label: this.linkConfirmAction(),
     disabled: true,
     action: () => this.isLinkEditing ? this.toEditLink() : this.toInsertLink(this.urlLink, this.urlLinkText)
   };
 
   get modalTitle(): string {
-    return this.modalType === 'image' ? this.literals.insertImage : this.literals.insertLink;
+    if (this.modalType === 'image') {
+      return this.literals.insertImage;
+    } else {
+      return this.linkConfirmAction();
+    }
   }
 
   get isUploadValid(): boolean {
@@ -93,6 +98,10 @@ export class PoRichTextModalComponent {
       const uploadImage = this.uploadModel[0].rawFile;
       return await convertImageToBase64(uploadImage);
     }
+  }
+
+  linkConfirmAction(): string {
+    return this.isLinkEditing ? this.literals.editLink : this.literals.insertLink;
   }
 
   emitCommand(value) {
@@ -131,6 +140,7 @@ export class PoRichTextModalComponent {
 
     if (this.modalType === PoRichTextModalType.Link) {
       this.prepareModalForLink();
+      this.modalLinkConfirmAction.label = this.linkConfirmAction();
     }
 
     this.modal.open();
@@ -155,13 +165,21 @@ export class PoRichTextModalComponent {
   }
 
   private isLinkElement(element: any): boolean {
-    return !!element && !!element.parentNode && element.parentNode.nodeName === 'A';
+    this.linkElement = element.parentNode;
+    while (this.linkElement != null) {
+        if (this.linkElement.nodeName === 'A') {
+            return true;
+        }
+        this.linkElement = this.linkElement.parentNode;
+    }
+    return false;
   }
 
   private prepareModalForLink() {
     this.saveSelectionTextRange();
     this.formReset(this.modalLinkForm.control);
-    this.formModelValidate();
+
+    setTimeout(() => { this.formModelValidate(); });
 
     const isLinkElement = this.isLinkElement(this.savedCursorPosition[0]);
 
@@ -169,7 +187,6 @@ export class PoRichTextModalComponent {
       this.setLinkEditableForModal();
       this.isLinkEditing = true;
     }
-
   }
 
   private restoreSelection() {
@@ -202,13 +219,12 @@ export class PoRichTextModalComponent {
   }
 
   private setLinkEditableForModal() {
-    this.urlLinkText = this.savedCursorPosition[0].parentNode.innerText;
-    this.urlLink = this.savedCursorPosition[0].parentNode.getAttribute('href');
+    this.urlLinkText = this.linkElement.innerText;
+    this.urlLink = this.linkElement.getAttribute('href');
   }
 
   private toEditLink() {
-    const linkElement = this.savedCursorPosition[0].parentNode;
-    linkElement.remove();
+    this.linkElement.remove();
 
     this.toInsertLink(this.urlLink, this.urlLinkText);
   }

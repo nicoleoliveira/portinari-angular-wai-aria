@@ -124,10 +124,13 @@ export class PoRichTextBodyComponent implements OnInit {
     });
   }
 
-  private cursorPositionedInALink() {
-    const link = document.getSelection();
-
-    return link.focusNode.parentElement.tagName === 'A';
+  private cursorPositionedInALink() {
+    const textSelection = document.getSelection();
+    if (textSelection.focusNode.parentElement.tagName === 'A') {
+      return true;
+    } else {
+      return this.isParentNodeAnchor(textSelection, 'A');
+    }
   }
 
   private emitSelectionCommands() {
@@ -146,9 +149,7 @@ export class PoRichTextBodyComponent implements OnInit {
     if (isIE()) {
       this.insertHtmlLinkElement(urlLink, urlLinkText);
     } else {
-      // necessário '&nbsp;' no fim pois o Firefox mantém o cursor dentro da tag;
       const linkValue = `<a class="po-rich-text-link" href="${urlLink}" target="_blank">${urlLinkText || urlLink}</a>`;
-
       document.execCommand(linkCommand, false, linkValue);
     }
 
@@ -169,6 +170,17 @@ export class PoRichTextBodyComponent implements OnInit {
 
     selectionRange.deleteContents();
     selectionRange.insertNode(elementLink);
+  }
+
+  private isParentNodeAnchor(textSelection, parent): boolean {
+    if (textSelection) {
+      let parentElementHTML = textSelection.focusNode.parentElement;
+      while (parentElementHTML != null) {
+        if (parentElementHTML.tagName === parent) { return true; }
+        parentElementHTML = parentElementHTML.parentElement;
+      }
+      return false;
+    }
   }
 
   private onAnchorClick = event => {
