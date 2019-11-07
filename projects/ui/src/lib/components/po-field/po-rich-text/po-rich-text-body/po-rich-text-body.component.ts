@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 
-import { isIE, openExternalLink } from './../../../../utils/util';
+import { isIE, isFirefox, openExternalLink } from './../../../../utils/util';
 import { PoKeyCodeEnum } from './../../../../enums/po-key-code.enum';
 
 const poRichTextBodyCommands = [
@@ -13,6 +13,7 @@ const poRichTextBodyCommands = [
 })
 export class PoRichTextBodyComponent implements OnInit {
 
+  linkElement;
   private timeoutChange: any;
   private valueBeforeChange: any;
 
@@ -33,6 +34,8 @@ export class PoRichTextBodyComponent implements OnInit {
   @Output('p-shortcut-command') shortcutCommand = new EventEmitter<any>();
 
   @Output('p-value') value = new EventEmitter<any>();
+
+  @Output('p-selected-link') selectedLink = new EventEmitter<any>();
 
   ngOnInit() {
     this.bodyElement.nativeElement.designMode = 'on';
@@ -127,9 +130,10 @@ export class PoRichTextBodyComponent implements OnInit {
   private cursorPositionedInALink() {
     const textSelection = document.getSelection();
     if (textSelection.focusNode.parentElement.tagName === 'A') {
+      this.linkElement = textSelection.focusNode.parentElement;
       return true;
-    } else {
-      return this.isParentNodeAnchor(textSelection, 'A');
+    } else {
+      return this.isParentNodeAnchor(textSelection);
     }
   }
 
@@ -139,6 +143,7 @@ export class PoRichTextBodyComponent implements OnInit {
     const hexColor = this.rgbToHex(rgbColor);
 
     if (this.cursorPositionedInALink()) {
+      this.selectedLink.emit(this.linkElement);
       commands.push('Createlink');
     }
 
@@ -149,7 +154,11 @@ export class PoRichTextBodyComponent implements OnInit {
     if (isIE()) {
       this.insertHtmlLinkElement(urlLink, urlLinkText);
     } else {
-      const linkValue = `<a class="po-rich-text-link" href="${urlLink}" target="_blank">${urlLinkText || urlLink}</a>`;
+      // '&nbsp;' necessário para o cursor não ficar preso dentro do link no Firefox.
+      const linkValue = isFirefox() ?
+      `&nbsp;<a class="po-rich-text-link" href="${urlLink}" target="_blank">${urlLinkText || urlLink}</a>&nbsp;` :
+      `<a class="po-rich-text-link" href="${urlLink}" target="_blank">${urlLinkText || urlLink}</a>`;
+
       document.execCommand(linkCommand, false, linkValue);
     }
 
@@ -172,13 +181,17 @@ export class PoRichTextBodyComponent implements OnInit {
     selectionRange.insertNode(elementLink);
   }
 
-  private isParentNodeAnchor(textSelection, parent): boolean {
-    if (textSelection) {
-      let parentElementHTML = textSelection.focusNode.parentElement;
-      while (parentElementHTML != null) {
-        if (parentElementHTML.tagName === parent) { return true; }
-        parentElementHTML = parentElementHTML.parentElement;
+  private isParentNodeAnchor(textSelection): boolean {
+    if (textSelection) {
+      let parentElementHTML = textSelection.focusNode.parentElement;
+      while (parentElementHTML && parentElementHTML.tagName != null) {
+        if (parentElementHTML.tagName === 'A') {
+          this.linkElement = parentElementHTML;
+          return true;
+        }
+        parentElementHTML = parentElementHTML.parentElement;
       }
+      this.linkElement = undefined;
       return false;
     }
   }

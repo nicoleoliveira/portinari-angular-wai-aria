@@ -20,6 +20,7 @@ export class PoRichTextModalComponent {
 
   linkElement;
   isLinkEditing: boolean;
+  isSelectedLink: boolean;
   modalType: PoRichTextModalType;
   savedCursorPosition;
   selection = document.getSelection();
@@ -146,6 +147,11 @@ export class PoRichTextModalComponent {
     this.modal.open();
   }
 
+  selectedLink(event) {
+    this.isSelectedLink = event ? true : false;
+    this.linkElement = event;
+  }
+
   private checkIfIsEmpty(urlLink: string, urlLinkText: string) {
     return urlLinkText === undefined || urlLinkText.trim() === '' ? urlLink : urlLinkText;
   }
@@ -156,6 +162,7 @@ export class PoRichTextModalComponent {
     this.urlLinkText = undefined;
     this.uploadModel = undefined;
     this.isLinkEditing = false;
+    this.isSelectedLink = false;
   }
 
   private formReset(control: AbstractControl) {
@@ -164,28 +171,15 @@ export class PoRichTextModalComponent {
     control.updateValueAndValidity();
   }
 
-  private isLinkElement(element: any): boolean {
-    this.linkElement = element.parentNode;
-    while (this.linkElement != null) {
-        if (this.linkElement.nodeName === 'A') {
-            return true;
-        }
-        this.linkElement = this.linkElement.parentNode;
-    }
-    return false;
-  }
-
   private prepareModalForLink() {
     this.saveSelectionTextRange();
     this.formReset(this.modalLinkForm.control);
 
     setTimeout(() => { this.formModelValidate(); });
 
-    const isLinkElement = this.isLinkElement(this.savedCursorPosition[0]);
-
-    if (isLinkElement) {
-      this.setLinkEditableForModal();
+    if (this.isSelectedLink) {
       this.isLinkEditing = true;
+      this.setLinkEditableForModal();
     }
   }
 
