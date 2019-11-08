@@ -132,7 +132,13 @@ export class PoRichTextBodyComponent implements OnInit {
     if (textSelection.focusNode.parentElement.tagName === 'A') {
       this.linkElement = textSelection.focusNode.parentElement;
       return true;
-    } else {
+
+    } else if (isFirefox() &&
+    textSelection.anchorNode.childNodes[0] &&
+    textSelection.anchorNode.childNodes[0].nodeName === 'A') {
+      return true;
+
+    } else {
       return this.isParentNodeAnchor(textSelection);
     }
   }
