@@ -163,6 +163,7 @@ export class PoRichTextModalComponent {
     this.uploadModel = undefined;
     this.isLinkEditing = false;
     this.isSelectedLink = false;
+    this.linkElement = undefined;
   }
 
   private formReset(control: AbstractControl) {

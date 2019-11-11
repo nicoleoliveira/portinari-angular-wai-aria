@@ -134,9 +134,10 @@ export class PoRichTextBodyComponent implements OnInit {
       return true;
 
     } else if (isFirefox() &&
-    textSelection.anchorNode.childNodes[0] &&
-    textSelection.anchorNode.childNodes[0].nodeName === 'A') {
-      return true;
+        textSelection.anchorNode.childNodes[0] &&
+        textSelection.anchorNode.childNodes[0].nodeName === 'A') {
+        this.linkElement = textSelection.anchorNode.childNodes[0];
+        return true;
 
     } else {
       return this.isParentNodeAnchor(textSelection);
@@ -250,11 +251,14 @@ export class PoRichTextBodyComponent implements OnInit {
     const isCtrl = event.ctrlKey || event.key === 'Control';
     const isCommand = event.metaKey;
 
-    const isOnCtrlLink = element.nodeName === 'A' && (isCtrl || isCommand);
+    const isOnCtrlLink = this.cursorPositionedInALink() && (isCtrl || isCommand);
 
     if (isOnCtrlLink) {
       element['classList'][action]('po-clickable');
+    } else {
+      element['classList'].remove('po-clickable');
     }
+    this.updateModel();
 
   }
 
