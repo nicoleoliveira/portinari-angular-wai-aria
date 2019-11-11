@@ -150,9 +150,9 @@ export class PoRichTextBodyComponent implements OnInit {
     const hexColor = this.rgbToHex(rgbColor);
 
     if (this.cursorPositionedInALink()) {
-      this.selectedLink.emit(this.linkElement);
       commands.push('Createlink');
     }
+    this.selectedLink.emit(this.linkElement); //  é importante esse cara ficar fora do if para poder emitir mesmo undefined.
 
     this.commands.emit({commands, hexColor});
   }
