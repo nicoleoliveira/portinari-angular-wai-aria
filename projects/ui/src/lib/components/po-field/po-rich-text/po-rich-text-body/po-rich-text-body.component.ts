@@ -127,21 +127,33 @@ export class PoRichTextBodyComponent implements OnInit {
     });
   }
 
-  private cursorPositionedInALink() {
+  private cursorPositionedInALink(): boolean {
     const textSelection = document.getSelection();
-    if (textSelection.focusNode.parentElement.tagName === 'A') {
+    let isLink = false;
+    this.linkElement = undefined;
+    if (textSelection.focusNode.parentElement &&
+      textSelection.focusNode.parentElement.tagName === 'A') {
       this.linkElement = textSelection.focusNode.parentElement;
-      return true;
-
-    } else if (isFirefox() &&
-        textSelection.anchorNode.childNodes[0] &&
+      isLink = true;
+    } else if (isFirefox()) {
+      if (textSelection.anchorNode.childNodes[0] &&
         textSelection.anchorNode.childNodes[0].nodeName === 'A') {
         this.linkElement = textSelection.anchorNode.childNodes[0];
-        return true;
-
+        isLink = true;
+      } else {
+        const textLink = textSelection.toString();
+        this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
+          if (element.innerText && element.innerText === textLink) {
+            this.linkElement = element;
+            isLink = true;
+            return;
+          }
+        });
+      }
     } else {
-      return this.isParentNodeAnchor(textSelection);
+      isLink = this.isParentNodeAnchor(textSelection);
     }
+    return isLink;
   }
 
   private emitSelectionCommands() {
@@ -190,16 +202,19 @@ export class PoRichTextBodyComponent implements OnInit {
 
   private isParentNodeAnchor(textSelection): boolean {
     if (textSelection) {
+      let isLink = false;
       let parentElementHTML = textSelection.focusNode.parentElement;
       while (parentElementHTML && parentElementHTML.tagName != null) {
         if (parentElementHTML.tagName === 'A') {
           this.linkElement = parentElementHTML;
-          return true;
+          isLink = true;
+          return isLink;
         }
         parentElementHTML = parentElementHTML.parentElement;
       }
       this.linkElement = undefined;
-      return false;
+      isLink = false;
+      return isLink;
     }
   }
 
