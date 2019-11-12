@@ -159,7 +159,11 @@ export class PoRichTextBodyComponent implements OnInit {
   private emitSelectionCommands() {
     const commands = poRichTextBodyCommands.filter(command => document.queryCommandState(command));
     const rgbColor = document.queryCommandValue('ForeColor');
-    const hexColor = this.rgbToHex(rgbColor);
+
+    let hexColor;
+    if (!isIE()) {
+      hexColor = this.rgbToHex(rgbColor);
+    }
 
     if (this.cursorPositionedInALink()) {
       commands.push('Createlink');
