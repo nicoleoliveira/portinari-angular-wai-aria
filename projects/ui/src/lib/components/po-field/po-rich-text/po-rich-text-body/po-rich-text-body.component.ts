@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 
-import { isIE, isFirefox, openExternalLink } from './../../../../utils/util';
+import { isIE, isIEOrEdge, isFirefox, openExternalLink } from './../../../../utils/util';
 import { PoKeyCodeEnum } from './../../../../enums/po-key-code.enum';
 
 const poRichTextBodyCommands = [
@@ -135,7 +135,7 @@ export class PoRichTextBodyComponent implements OnInit {
       textSelection.focusNode.parentElement.tagName === 'A') {
       this.linkElement = textSelection.focusNode.parentElement;
       isLink = true;
-    } else if (isFirefox()) {
+    } else if (isFirefox() || isIEOrEdge()) {
       if (textSelection.anchorNode.childNodes[0] &&
         textSelection.anchorNode.childNodes[0].nodeName === 'A') {
         this.linkElement = textSelection.anchorNode.childNodes[0];
