@@ -13,7 +13,7 @@ const poRichTextBodyCommands = [
 })
 export class PoRichTextBodyComponent implements OnInit {
 
-  linkElement;
+  private linkElement: any;
   private timeoutChange: any;
   private valueBeforeChange: any;
 
@@ -127,32 +127,25 @@ export class PoRichTextBodyComponent implements OnInit {
     });
   }
 
-  private cursorPositionedInALink(): boolean {
+  private isCursorPositionedInALink(): boolean {
     const textSelection = document.getSelection();
-    let isLink = false;
+    const parent = textSelection.focusNode.parentElement;
+
     this.linkElement = undefined;
-    if (textSelection.focusNode.parentElement &&
-      textSelection.focusNode.parentElement.tagName === 'A') {
-      this.linkElement = textSelection.focusNode.parentElement;
+
+    let isLink = false;
+
+    if (parent && parent.tagName === 'A') {
+      this.linkElement = parent;
       isLink = true;
+
     } else if (isFirefox() || isIEOrEdge()) {
-      if (textSelection.anchorNode.childNodes[0] &&
-        textSelection.anchorNode.childNodes[0].nodeName === 'A') {
-        this.linkElement = textSelection.anchorNode.childNodes[0];
-        isLink = true;
-      } else {
-        const textLink = textSelection.toString();
-        this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
-          if (element.innerText && element.innerText === textLink) {
-            this.linkElement = element;
-            isLink = true;
-            return;
-          }
-        });
-      }
+      isLink = this.verifyCursorPositionInFirefoxIEEdge(textSelection);
+
     } else {
       isLink = this.isParentNodeAnchor(textSelection);
     }
+
     return isLink;
   }
 
@@ -165,10 +158,10 @@ export class PoRichTextBodyComponent implements OnInit {
       hexColor = this.rgbToHex(rgbColor);
     }
 
-    if (this.cursorPositionedInALink()) {
+    if (this.isCursorPositionedInALink()) {
       commands.push('Createlink');
     }
-    this.selectedLink.emit(this.linkElement); //  é importante esse cara ficar fora do if para poder emitir mesmo undefined.
+    this.selectedLink.emit(this.linkElement); // importante ficar fora do if para emitir mesmo undefined.
 
     this.commands.emit({commands, hexColor});
   }
@@ -205,9 +198,11 @@ export class PoRichTextBodyComponent implements OnInit {
   }
 
   private isParentNodeAnchor(textSelection): boolean {
+
     if (textSelection) {
       let isLink = false;
       let parentElementHTML = textSelection.focusNode.parentElement;
+
       while (parentElementHTML && parentElementHTML.tagName != null) {
         if (parentElementHTML.tagName === 'A') {
           this.linkElement = parentElementHTML;
@@ -216,10 +211,12 @@ export class PoRichTextBodyComponent implements OnInit {
         }
         parentElementHTML = parentElementHTML.parentElement;
       }
+
       this.linkElement = undefined;
       isLink = false;
       return isLink;
     }
+
   }
 
   private onAnchorClick = event => {
@@ -266,17 +263,17 @@ export class PoRichTextBodyComponent implements OnInit {
 
   private toggleCursorOnLink(event: any, action: 'add' | 'remove') {
     const element = document.getSelection().focusNode.parentNode;
-
     const isCtrl = event.ctrlKey || event.key === 'Control';
     const isCommand = event.metaKey;
-
-    const isOnCtrlLink = this.cursorPositionedInALink() && (isCtrl || isCommand);
+    const isOnCtrlLink = this.isCursorPositionedInALink() && (isCtrl || isCommand);
 
     if (isOnCtrlLink) {
       element['classList'][action]('po-clickable');
+
     } else {
       element['classList'].remove('po-clickable');
     }
+
     this.updateModel();
 
   }
@@ -291,6 +288,30 @@ export class PoRichTextBodyComponent implements OnInit {
     if (this.modelValue) {
       this.bodyElement.nativeElement.insertAdjacentHTML('afterbegin', this.modelValue);
     }
+  }
+
+  private verifyCursorPositionInFirefoxIEEdge(textSelection): boolean {
+    const firstChild = textSelection.anchorNode.childNodes[0];
+    let isLink = false;
+
+    if (firstChild && firstChild.nodeName === 'A') {
+      this.linkElement = firstChild;
+      isLink = true;
+
+    } else {
+      const textLink = textSelection.toString();
+
+      this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
+        if (element.innerText && element.innerText === textLink) {
+          this.linkElement = element;
+          isLink = true;
+          return;
+        }
+      });
+    }
+
+    return isLink;
+
   }
 
 }

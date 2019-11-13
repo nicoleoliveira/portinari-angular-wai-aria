@@ -1,7 +1,7 @@
 import { Component, ElementRef, EventEmitter, Output, ViewChild } from '@angular/core';
 import { AbstractControl, NgForm } from '@angular/forms';
 
-import { convertImageToBase64, isExternalLink } from '../../../../utils/util';
+import { convertImageToBase64, isExternalLink, isIE } from '../../../../utils/util';
 import { PoLanguageService } from './../../../../services/po-language/po-language.service';
 
 import { PoModalAction, PoModalComponent } from '../../../po-modal';
@@ -18,9 +18,6 @@ const uploadRestrictions = ['.apng', '.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.
 })
 export class PoRichTextModalComponent {
 
-  linkElement;
-  isLinkEditing: boolean;
-  isSelectedLink: boolean;
   modalType: PoRichTextModalType;
   savedCursorPosition;
   selection = document.getSelection();
@@ -32,6 +29,9 @@ export class PoRichTextModalComponent {
   urlLink: string;
   urlLinkText: string;
 
+  private isLinkEditing: boolean;
+  private isSelectedLink: boolean;
+  private linkElement: any;
   private savedSelection: Range | null;
 
   readonly literals = {
@@ -219,7 +219,11 @@ export class PoRichTextModalComponent {
   }
 
   private toEditLink() {
-    this.linkElement.remove();
+    if (isIE()) {
+      this.linkElement.parentElement.removeChild(this.linkElement);
+    } else {
+      this.linkElement.remove();
+    }
 
     this.toInsertLink(this.urlLink, this.urlLinkText);
   }
