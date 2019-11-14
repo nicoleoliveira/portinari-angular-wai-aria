@@ -308,9 +308,7 @@ export class PoRichTextBodyComponent implements OnInit {
     } else {
       const textLink = textSelection.toString() || textSelection.anchorNode.data;
 
-      if (textLink) {
-        isLink = this.searchForALinkInDOM(textLink);
-      }
+      isLink = !!textLink && this.searchForALinkInDOM(textLink);
     }
 
     return isLink;
