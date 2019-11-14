@@ -1,6 +1,6 @@
 import { Component, ElementRef, EventEmitter, Input, OnInit, Output, ViewChild } from '@angular/core';
 
-import { isIE, isIEOrEdge, isFirefox, openExternalLink } from './../../../../utils/util';
+import { isFirefox, isIE, isIEOrEdge, openExternalLink } from './../../../../utils/util';
 import { PoKeyCodeEnum } from './../../../../enums/po-key-code.enum';
 
 const poRichTextBodyCommands = [
@@ -33,9 +33,9 @@ export class PoRichTextBodyComponent implements OnInit {
 
   @Output('p-shortcut-command') shortcutCommand = new EventEmitter<any>();
 
-  @Output('p-value') value = new EventEmitter<any>();
-
   @Output('p-selected-link') selectedLink = new EventEmitter<any>();
+
+  @Output('p-value') value = new EventEmitter<any>();
 
   ngOnInit() {
     this.bodyElement.nativeElement.designMode = 'on';
@@ -301,13 +301,33 @@ export class PoRichTextBodyComponent implements OnInit {
     } else {
       const textLink = textSelection.toString();
 
-      this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
-        if (element.innerText && element.innerText === textLink) {
-          this.linkElement = element;
-          isLink = true;
-          return;
+      if (!isIE()) {
+        this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
+          if (element.innerText && element.innerText === textLink) {
+            this.linkElement = element;
+            isLink = true;
+            return;
+          }
+        });
+
+      } else { // o IE não suporta NodeList.foreach
+        const textSelected = textSelection.anchorNode.data;
+
+        if (textSelected !== null) {
+          const linkList = this.bodyElement.nativeElement.querySelectorAll('a');
+
+          for (let index = 0; index < linkList.length; ++index) {
+            if (linkList[index].innerText && linkList[index].innerText === textSelected) {
+              this.linkElement = linkList[index];
+              isLink = true;
+            }
+          }
+
+        } else {
+          this.linkElement = undefined;
+          isLink = false;
         }
-      });
+      }
     }
 
     return isLink;
