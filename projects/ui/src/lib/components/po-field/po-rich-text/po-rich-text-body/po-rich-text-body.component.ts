@@ -197,13 +197,13 @@ export class PoRichTextBodyComponent implements OnInit {
     selectionRange.insertNode(elementLink);
   }
 
-  private isParentNodeAnchor(textSelection): boolean {
+  private isParentNodeAnchor(textSelection: Selection): boolean {
 
     if (textSelection) {
       let isLink = false;
       let parentElementHTML = textSelection.focusNode.parentElement;
 
-      while (parentElementHTML && parentElementHTML.tagName != null) {
+      while (parentElementHTML && parentElementHTML.tagName !== null) {
         if (parentElementHTML.tagName === 'A') {
           this.linkElement = parentElementHTML;
           isLink = true;
@@ -216,7 +216,6 @@ export class PoRichTextBodyComponent implements OnInit {
       isLink = false;
       return isLink;
     }
-
   }
 
   private onAnchorClick = event => {

@@ -496,6 +496,23 @@ describe('PoRichTextBodyComponent:', () => {
       expect(document.execCommand).toHaveBeenCalledWith(fakeValue.command, false, linkValue);
     });
 
+    it(`handleCommandLink: should add '&nbsp;' at beginning and end of 'linkValue' if 'isFirefox'`, () => {
+      const expectedLinkValue = `&nbsp;<a class="po-rich-text-link" href="urlLink" target="_blank">urlLink</a>&nbsp;`;
+      const fakeValue = {
+        command: 'InsertHTML',
+        urlLink: 'urlLink',
+        urlLinkText: undefined
+      };
+
+      spyOn(UtilsFunction, 'isIE').and.returnValue(false);
+      spyOn(UtilsFunction, 'isFirefox').and.returnValue(true);
+      spyOn(document, <any>'execCommand');
+
+      component['handleCommandLink'](fakeValue.command, fakeValue.urlLink, fakeValue.urlLinkText);
+
+      expect(document.execCommand).toHaveBeenCalledWith(fakeValue.command, false, expectedLinkValue);
+    });
+
     it('handleCommandLink: should call `addClickListenerOnAnchorElements`', () => {
       spyOn(component, <any>'addClickListenerOnAnchorElements');
 
@@ -570,6 +587,7 @@ describe('PoRichTextBodyComponent:', () => {
       const event = { ctrlKey: true };
 
       const addSpy = jasmine.createSpy('add');
+      const isCursorPositionedInALinkSpy = spyOn(component, <any> 'isCursorPositionedInALink').and.returnValue(true);
 
       spyOn(document , 'getSelection').and.returnValue(<any>{
         focusNode : {
@@ -585,12 +603,14 @@ describe('PoRichTextBodyComponent:', () => {
       component['toggleCursorOnLink'](event, 'add');
 
       expect(addSpy).toHaveBeenCalledWith('po-clickable');
+      expect(isCursorPositionedInALinkSpy).toHaveBeenCalled();
     });
 
     it('toggleCursorOnLink: should call add of classList if `action` is add, `element` is `anchor` and `key` is `metaKey`', () => {
       const event = { metaKey: true };
 
       const addSpy = jasmine.createSpy('add');
+      const isCursorPositionedInALinkSpy = spyOn(component, <any> 'isCursorPositionedInALink').and.returnValue(true);
 
       spyOn(document , 'getSelection').and.returnValue(<any>{
         focusNode : {
@@ -606,12 +626,14 @@ describe('PoRichTextBodyComponent:', () => {
       component['toggleCursorOnLink'](event, 'add');
 
       expect(addSpy).toHaveBeenCalledWith('po-clickable');
+      expect(isCursorPositionedInALinkSpy).toHaveBeenCalled();
     });
 
     it('toggleCursorOnLink: should call add of classList if `action` is add, `element` is `anchor` and `key` is `Control`', () => {
       const event = { key: 'Control' };
 
       const addSpy = jasmine.createSpy('add');
+      const isCursorPositionedInALinkSpy = spyOn(component, <any> 'isCursorPositionedInALink').and.returnValue(true);
 
       spyOn(document , 'getSelection').and.returnValue(<any>{
         focusNode : {
@@ -627,13 +649,14 @@ describe('PoRichTextBodyComponent:', () => {
       component['toggleCursorOnLink'](event, 'add');
 
       expect(addSpy).toHaveBeenCalledWith('po-clickable');
+      expect(isCursorPositionedInALinkSpy).toHaveBeenCalled();
     });
 
-    it(`toggleCursorOnLink: shouldn't call add or remove of classList if 'element' not is 'anchor'`, () => {
-
+    it(`toggleCursorOnLink: shouldn't call add and call remove of classList if 'element' not is 'anchor'`, () => {
       const event = { key: 'Control' };
 
       const addSpy = jasmine.createSpy('add');
+      const isCursorPositionedInALinkSpy = spyOn(component, <any> 'isCursorPositionedInALink').and.returnValue(false);
       const removeSpy = jasmine.createSpy('remove');
 
       spyOn(document , 'getSelection').and.returnValue(<any>{
@@ -650,43 +673,9 @@ describe('PoRichTextBodyComponent:', () => {
 
       component['toggleCursorOnLink'](event, 'add');
 
+      expect(removeSpy).toHaveBeenCalled();
+      expect(isCursorPositionedInALinkSpy).toHaveBeenCalled();
       expect(addSpy).not.toHaveBeenCalled();
-      expect(removeSpy).not.toHaveBeenCalled();
-
-      component['toggleCursorOnLink'](event, 'remove');
-
-      expect(addSpy).not.toHaveBeenCalled();
-      expect(removeSpy).not.toHaveBeenCalled();
-    });
-
-    it(`toggleCursorOnLink: shouldn't call add or remove of classList if 'key' not is 'ctrl' or 'metaKey'`, () => {
-
-      const event = { key: 'enter' };
-
-      const addSpy = jasmine.createSpy('add');
-      const removeSpy = jasmine.createSpy('remove');
-
-      spyOn(document , 'getSelection').and.returnValue(<any>{
-        focusNode : {
-          parentNode: {
-            nodeName: 'A',
-            classList: {
-              add: addSpy,
-              remove: removeSpy
-            }
-          }
-        }
-      });
-
-      component['toggleCursorOnLink'](event, 'remove');
-
-      expect(addSpy).not.toHaveBeenCalled();
-      expect(removeSpy).not.toHaveBeenCalled();
-
-      component['toggleCursorOnLink'](event, 'add');
-
-      expect(addSpy).not.toHaveBeenCalled();
-      expect(removeSpy).not.toHaveBeenCalled();
     });
 
     it('onAnchorClick: should `openExternalLink` with url if key is `ctrlKey`', () => {
@@ -839,6 +828,64 @@ describe('PoRichTextBodyComponent:', () => {
       fixture.detectChanges();
 
       expect(nativeElement.querySelector('.po-rich-text-link')).toBeTruthy();
+    });
+
+    it('isParentNodeAnchor: should return true if focusNode.parentElement if anchor element', () => {
+      const textSelection = {
+        focusNode: {
+          parentElement: {
+            tagName: 'A'
+          }
+        }
+      };
+
+      const isParentNodeAnchor = component['isParentNodeAnchor'](<any> textSelection);
+
+      expect(isParentNodeAnchor).toBe(true);
+      expect(component['linkElement']).toEqual(textSelection.focusNode.parentElement);
+    });
+
+    it('isParentNodeAnchor: should return true if parentElement of focusNode.parentElement if anchor element', () => {
+      const parentElement = {
+        tagName : 'A'
+      };
+
+      const textSelection = {
+        focusNode: {
+          parentElement: {
+            tagName: 'DIV',
+            parentElement
+          }
+        }
+      };
+
+      const isParentNodeAnchor = component['isParentNodeAnchor'](<any> textSelection);
+
+      expect(isParentNodeAnchor).toBe(true);
+      expect(component['linkElement']).toEqual(textSelection.focusNode.parentElement.parentElement);
+    });
+
+    it('isParentNodeAnchor: should return false and set linkElement to undefined', () => {
+      const textSelection = {
+        focusNode: {
+          parentElement: {
+            tagName: ''
+          }
+        }
+      };
+
+      const isParentNodeAnchor = component['isParentNodeAnchor'](<any> textSelection);
+
+      expect(isParentNodeAnchor).toBe(false);
+      expect(component['linkElement']).toBeUndefined();
+    });
+
+    it('isParentNodeAnchor: should return falsy if textSelection is undefined', () => {
+      const textSelection = undefined;
+
+      const isParentNodeAnchor = component['isParentNodeAnchor'](<any> textSelection);
+
+      expect(isParentNodeAnchor).toBeFalsy();
     });
 
   });
