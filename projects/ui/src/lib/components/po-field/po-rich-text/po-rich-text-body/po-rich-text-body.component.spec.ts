@@ -888,6 +888,133 @@ describe('PoRichTextBodyComponent:', () => {
       expect(isParentNodeAnchor).toBeFalsy();
     });
 
+    it('searchForALinkInDOM: should return true if bodyElement contains linkText', () => {
+      const linkText = 'angular';
+
+      const anchors = [
+        { innerText: 'google' },
+        { innerText: 'angular' },
+        { innerText: 'react' }
+      ];
+
+      spyOn(component.bodyElement.nativeElement, 'querySelectorAll').and.returnValue(anchors);
+
+      expect(component['searchForALinkInDOM'](linkText)).toBe(true);
+    });
+
+    it('searchForALinkInDOM: should return false if bodyElement not contains linkText', () => {
+      const linkText = 'vue';
+
+      const anchors = [
+        { innerText: 'google' },
+        { innerText: 'angular' },
+        { innerText: 'react' }
+      ];
+
+      spyOn(component.bodyElement.nativeElement, 'querySelectorAll').and.returnValue(anchors);
+
+      expect(component['searchForALinkInDOM'](linkText)).toBe(false);
+    });
+
+    it('searchForALinkInDOM: should return false if bodyElement not contains innerText', () => {
+      const linkText = 'vue';
+
+      const anchors = [
+        { value: 'google' },
+        { value: 'angular' },
+        { value: 'react' }
+      ];
+
+      spyOn(component.bodyElement.nativeElement, 'querySelectorAll').and.returnValue(anchors);
+
+      expect(component['searchForALinkInDOM'](linkText)).toBe(false);
+    });
+
+    it('searchForALinkInDOM: should call querySelector with tag `a`', () => {
+      const linkText = 'vue';
+
+      const anchors = [
+        { value: 'google' },
+        { value: 'angular' },
+        { value: 'react' }
+      ];
+
+      spyOn(component.bodyElement.nativeElement, 'querySelectorAll').and.returnValue(anchors);
+
+      component['searchForALinkInDOM'](linkText);
+
+      expect(component.bodyElement.nativeElement.querySelectorAll).toHaveBeenCalledWith('a');
+    });
+
+    it('verifyCursorPositionInFirefoxIEEdge: should return true if firstChild.nodeName is a tag A', () => {
+      const anchorElement = { nodeName: 'A' };
+      const textSelection = {
+        anchorNode: {
+          childNodes: [ anchorElement ]
+        }
+      };
+
+      expect(component['verifyCursorPositionInFirefoxIEEdge'](textSelection)).toBe(true);
+      expect(component['linkElement']).toEqual(anchorElement);
+    });
+
+    it('verifyCursorPositionInFirefoxIEEdge: should return true if searchForALinkInDOM return true', () => {
+      const textSelection = {
+        anchorNode: {
+          childNodes: [ { nodeName: 'DIV' } ]
+        }
+      };
+
+      spyOn(component, <any>'searchForALinkInDOM').and.returnValue(true);
+
+      expect(component['verifyCursorPositionInFirefoxIEEdge'](textSelection)).toBe(true);
+    });
+
+    it('verifyCursorPositionInFirefoxIEEdge: should return true if searchForALinkInDOM return true and anchorNode.data is defined', () => {
+      const textSelection = {
+        toString: () => false,
+        anchorNode:
+        {
+          childNodes: [ { nodeName: 'DIV' } ],
+          data: 'test'
+        }
+      };
+
+      spyOn(component, <any>'searchForALinkInDOM').and.returnValue(true);
+
+      expect(component['verifyCursorPositionInFirefoxIEEdge'](textSelection)).toBe(true);
+    });
+
+    it('verifyCursorPositionInFirefoxIEEdge: should return false if searchForALinkInDOM return false', () => {
+      const textSelection = {
+        toString: () => false,
+        anchorNode:
+        {
+          childNodes: [ { nodeName: 'DIV' } ],
+          data: 'test'
+        }
+      };
+
+      spyOn(component, <any>'searchForALinkInDOM').and.returnValue(false);
+
+      expect(component['verifyCursorPositionInFirefoxIEEdge'](textSelection)).toBe(false);
+    });
+
+    it('verifyCursorPositionInFirefoxIEEdge: should return false if no text has been selected', () => {
+      const textSelection = {
+        toString: () => false,
+        anchorNode:
+        {
+          childNodes: [ { nodeName: 'DIV' } ],
+          data: undefined
+        }
+      };
+
+      spyOn(component, <any>'searchForALinkInDOM').and.returnValue(false);
+
+      expect(component['verifyCursorPositionInFirefoxIEEdge'](textSelection)).toBe(false);
+    });
+
   });
 
   describe('Templates:', () => {
