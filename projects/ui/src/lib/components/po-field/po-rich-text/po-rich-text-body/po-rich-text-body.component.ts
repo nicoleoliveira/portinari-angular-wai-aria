@@ -197,7 +197,16 @@ export class PoRichTextBodyComponent implements OnInit {
     selectionRange.insertNode(elementLink);
   }
 
-  private isParentNodeAnchor(textSelection: Selection): boolean {
+  private isLinkForFirefoxOrEdge(textLink: any) {
+    return Array.from(this.bodyElement.nativeElement.querySelectorAll('a')).some(element => {
+      if (element['innerText'] && element['innerText'] === textLink) {
+        this.linkElement = element;
+        return true;
+      }
+    });
+  }
+
+  private isParentNodeAnchor(textSelection): boolean {
 
     if (textSelection) {
       let isLink = false;
@@ -301,30 +310,13 @@ export class PoRichTextBodyComponent implements OnInit {
       const textLink = textSelection.toString();
 
       if (!isIE()) {
-        this.bodyElement.nativeElement.querySelectorAll('a').forEach(element => {
-          if (element.innerText && element.innerText === textLink) {
-            this.linkElement = element;
-            isLink = true;
-            return;
-          }
-        });
+        isLink = this.isLinkForFirefoxOrEdge(textLink);
 
-      } else { // o IE não suporta NodeList.foreach
+      } else {
         const textSelected = textSelection.anchorNode.data;
 
         if (textSelected !== null) {
-          const linkList = this.bodyElement.nativeElement.querySelectorAll('a');
-
-          for (let index = 0; index < linkList.length; ++index) {
-            if (linkList[index].innerText && linkList[index].innerText === textSelected) {
-              this.linkElement = linkList[index];
-              isLink = true;
-            }
-          }
-
-        } else {
-          this.linkElement = undefined;
-          isLink = false;
+          isLink = this.isLinkForFirefoxOrEdge(textSelected);
         }
       }
     }
