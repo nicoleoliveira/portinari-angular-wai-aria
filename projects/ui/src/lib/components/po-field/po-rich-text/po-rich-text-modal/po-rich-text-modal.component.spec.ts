@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 
 import * as UtilsFunction from '../../../../utils/util';
 import { configureTestSuite } from '../../../../util-test/util-expect.spec';
@@ -151,16 +151,31 @@ describe('PoRichTextModalComponent:', () => {
 
     it('linkConfirmAction: should return `insertLink` if `isLinkEditing` is `false`', () => {
       component['isLinkEditing'] = false;
-      expect(component.linkConfirmAction).toBe(component.literals.insertLink);
+      expect(component.linkConfirmAction()).toBe(component.literals.insertLink);
     });
 
     it('linkConfirmAction: should return `editLink` if `isLinkEditing` is `true`', () => {
       component['isLinkEditing'] = true;
-      expect(component.linkConfirmAction).toBe(component.literals.editLink);
+      expect(component.linkConfirmAction()).toBe(component.literals.editLink);
     });
+
   });
 
   describe('Methods:', () => {
+
+    it(`selectedLink: should set 'isSelectedLink' and 'linkElement'.`, () => {
+      component['isSelectedLink'] = undefined;
+      component['linkElement'] = undefined;
+      const fakeEvent = {
+        isSelectedLink: true,
+        linkElement: 'portinari'
+      };
+
+      component.selectedLink(fakeEvent);
+
+      expect(component['isSelectedLink']).toBe(fakeEvent.isSelectedLink);
+      expect(component['linkElement']).toBe(fakeEvent);
+    });
 
     it(`openModal: should call 'modal.open' and 'saveCursorPosition'`, () => {
       const fakeType = PoRichTextModalType.Image;
@@ -187,21 +202,24 @@ describe('PoRichTextModalComponent:', () => {
     it('openModal: shouldn`t call `prepareModalForLink` if modalType not is `Link`', () => {
       const fakeType = PoRichTextModalType.Image;
 
-      spyOn(component, <any>'prepareModalForLink');
+      const spyOnPrepareModalForLink = spyOn(component, <any>'prepareModalForLink');
+      const spyOnOpen = spyOn(component.modal, <any>'open');
 
       component.openModal(fakeType);
 
-      expect(component['prepareModalForLink']).not.toHaveBeenCalled();
+      expect(spyOnPrepareModalForLink).not.toHaveBeenCalled();
+      expect(spyOnOpen).toHaveBeenCalled();
     });
 
-    fit('openModal: should set `modalLinkConfirmAction.label` with `linkConfirmAction` value', () => {
+    it('openModal: should call `prepareModalForLink` and set `modalLinkConfirmAction.label` with `linkConfirmAction` value', () => {
       const literal = 'link confirm action';
-
-      spyOnProperty(component, 'linkConfirmAction').and.returnValue(literal);
+      spyOn(component, 'linkConfirmAction').and.returnValue(literal);
+      const spyOnPrepareModalForLink = spyOn(component, <any>'prepareModalForLink');
 
       component.openModal(PoRichTextModalType.Link);
 
-      expect(component.modalConfirmAction.label).toBe(literal);
+      expect(component.modalLinkConfirmAction.label).toBe(literal);
+      expect(spyOnPrepareModalForLink).toHaveBeenCalled();
     });
 
     it(`convertToBase64: should call 'convertImageToBase64'.`, async () => {
@@ -686,7 +704,7 @@ describe('PoRichTextModalComponent:', () => {
 
   });
 
-  describe('Template:', () => {
+  describe('Templates:', () => {
 
     it(`should contain 'po-upload-input' if modalType === 'image'`, () => {
       component.modalType = PoRichTextModalType.Image;
