@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 
 import * as UtilsFunction from '../../../../utils/util';
 import { configureTestSuite } from '../../../../util-test/util-expect.spec';
@@ -149,6 +149,15 @@ describe('PoRichTextModalComponent:', () => {
       expect(component['toEditLink']).toHaveBeenCalled();
     });
 
+    it('linkConfirmAction: should return `insertLink` if `isLinkEditing` is `false`', () => {
+      component['isLinkEditing'] = false;
+      expect(component.linkConfirmAction).toBe(component.literals.insertLink);
+    });
+
+    it('linkConfirmAction: should return `editLink` if `isLinkEditing` is `true`', () => {
+      component['isLinkEditing'] = true;
+      expect(component.linkConfirmAction).toBe(component.literals.editLink);
+    });
   });
 
   describe('Methods:', () => {
@@ -183,6 +192,16 @@ describe('PoRichTextModalComponent:', () => {
       component.openModal(fakeType);
 
       expect(component['prepareModalForLink']).not.toHaveBeenCalled();
+    });
+
+    fit('openModal: should set `modalLinkConfirmAction.label` with `linkConfirmAction` value', () => {
+      const literal = 'link confirm action';
+
+      spyOnProperty(component, 'linkConfirmAction').and.returnValue(literal);
+
+      component.openModal(PoRichTextModalType.Link);
+
+      expect(component.modalConfirmAction.label).toBe(literal);
     });
 
     it(`convertToBase64: should call 'convertImageToBase64'.`, async () => {
@@ -558,68 +577,34 @@ describe('PoRichTextModalComponent:', () => {
       expect(fakeControl.updateValueAndValidity).toHaveBeenCalled();
     });
 
-    it('isLinkElement: should return true if `element` is an anchor', () => {
-      const element = {
-        parentNode: {
-          nodeName: 'A'
-        }
-      };
-
-      expect(component['isLinkElement'](element)).toBe(true);
-    });
-
-    it('isLinkElement: should return false if `element` not is an anchor', () => {
-      const element = {
-        parentNode: {
-          nodeName: 'DIV'
-        }
-      };
-
-      expect(component['isLinkElement'](element)).toBe(false);
-    });
-
-    it('isLinkElement: should return false if `parentNode` is undefined', () => {
-      const element = {
-        parentNode: undefined
-      };
-
-      expect(component['isLinkElement'](element)).toBe(false);
-    });
-
-    it('isLinkElement: should return false if `element` is undefined', () => {
-      const element = undefined;
-
-      expect(component['isLinkElement'](element)).toBe(false);
-    });
-
-    it('prepareModalForLink: should call `saveSelectionTextRange`, `formModelValidate` and `formReset`', () => {
+    it('prepareModalForLink: should call `saveSelectionTextRange`, `formModelValidate` and `formReset`', fakeAsync( () => {
       spyOn(component, <any>'saveSelectionTextRange');
       spyOn(component, <any>'formReset');
       spyOn(component, <any>'formModelValidate');
-      spyOn(component, <any>'isLinkElement');
 
       component.savedCursorPosition = [ '<a href="">link</a>' ];
 
       component['prepareModalForLink']();
+      tick();
 
       expect(component['saveSelectionTextRange']).toHaveBeenCalled();
       expect(component['formModelValidate']).toHaveBeenCalled();
       expect(component['formReset']).toHaveBeenCalledWith(component.modalLinkForm.control);
-    });
+    }));
 
-    it('prepareModalForLink: should call `setLinkEditableForModal` and set `isLinkEditing` to true if `isLinkElement` return true', () => {
+    it('prepareModalForLink: should call `setLinkEditableForModal` and set `isLinkEditing` to true if `isSelectedLink` is `true`', () => {
       spyOn(component, <any>'saveSelectionTextRange');
       spyOn(component, <any>'formReset');
       spyOn(component, <any>'formModelValidate');
 
       spyOn(component, <any>'setLinkEditableForModal');
-      spyOn(component, <any>'isLinkElement').and.returnValue(true);
+
+      component['isSelectedLink'] = true;
 
       component.savedCursorPosition = [ '<a href="">link</a>' ];
 
       component['prepareModalForLink']();
 
-      expect(component['isLinkElement']).toHaveBeenCalledWith(component.savedCursorPosition[0]);
       expect(component['setLinkEditableForModal']).toHaveBeenCalled();
       expect(component['isLinkEditing']).toBe(true);
     });
@@ -631,7 +616,8 @@ describe('PoRichTextModalComponent:', () => {
       spyOn(component, <any>'formModelValidate');
 
       spyOn(component, <any>'setLinkEditableForModal');
-      spyOn(component, <any>'isLinkElement').and.returnValue(false);
+
+      component['isSelectedLink'] = false;
 
       component['isLinkEditing'] = false;
       component.savedCursorPosition = [ '<a href="">link</a>' ];
@@ -643,15 +629,12 @@ describe('PoRichTextModalComponent:', () => {
     });
 
     it('setLinkEditableForModal: should set `urlLinkText` with text inner element seleted and `url` with href', () => {
-      component.savedCursorPosition = [{
-        parentNode: {
-          innerText: 'link text',
-          getAttribute: () => {}
-        }
-      }];
+      component['linkElement'] = {
+        innerText: 'link text',
+        getAttribute: () => {}
+      };
 
-      spyOn(component.savedCursorPosition[0].parentNode, 'getAttribute')
-        .and.returnValue('test.com');
+      spyOn( component['linkElement'], 'getAttribute').and.returnValue('test.com');
 
       component['setLinkEditableForModal']();
 
@@ -659,26 +642,34 @@ describe('PoRichTextModalComponent:', () => {
       expect(component.urlLink).toBe('test.com');
     });
 
-    it('toEditLink: should call `remove` of `savedCursorPosition[0]`', () => {
-      component.savedCursorPosition = [{
-        parentNode: {
-          remove: () => {}
-        }
-      }];
+    it('toEditLink: should call `parentElement.removeChild`, `toInsertLink` with `urlLink` and `urlLinkText` if `isIE` returns `true`',
+      () => {
+      component['linkElement'] = {
+        parentElement: { removeChild: () => {} }
+      };
 
-      spyOn(component.savedCursorPosition[0].parentNode, 'remove');
+      spyOn(UtilsFunction, 'isIE').and.returnValue(true);
+      spyOn(component, <any>'toInsertLink');
+      spyOn(component['linkElement'].parentElement, 'removeChild');
+
+      const linkText = 'link text';
+      const link = 'link.com';
+
+      component.urlLinkText = linkText;
+      component.urlLink = link;
 
       component['toEditLink']();
 
-      expect(component.savedCursorPosition[0].parentNode.remove).toHaveBeenCalled();
+      expect(component['toInsertLink']).toHaveBeenCalledWith(link, linkText);
+      expect(component['linkElement'].parentElement.removeChild).toHaveBeenCalled();
     });
 
-    it('toEditLink: should call `toInsertLink` with `urlLink` and `urlLinkText`', () => {
-      component.savedCursorPosition = [{
-        parentNode: { remove: () => {} }
-      }];
+    it('toEditLink: should call `remove`, `toInsertLink` with `urlLink` and `urlLinkText`', () => {
+      component['linkElement'] = {
+        remove: () => {}
+      };
 
-      spyOn(component.savedCursorPosition[0].parentNode, 'remove');
+      spyOn(component['linkElement'], 'remove');
       spyOn(component, <any>'toInsertLink');
 
       const linkText = 'link text';
@@ -690,6 +681,7 @@ describe('PoRichTextModalComponent:', () => {
       component['toEditLink']();
 
       expect(component['toInsertLink']).toHaveBeenCalledWith(link, linkText);
+      expect(component['linkElement'].remove).toHaveBeenCalled();
     });
 
   });

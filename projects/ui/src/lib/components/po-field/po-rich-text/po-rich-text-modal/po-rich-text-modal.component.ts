@@ -61,9 +61,9 @@ export class PoRichTextModalComponent {
   get modalTitle(): string {
     if (this.modalType === 'image') {
       return this.literals.insertImage;
-    } else {
-      return this.linkConfirmAction();
     }
+
+    return this.linkConfirmAction();
   }
 
   get isUploadValid(): boolean {
@@ -148,7 +148,7 @@ export class PoRichTextModalComponent {
   }
 
   selectedLink(event) {
-    this.isSelectedLink = event ? true : false;
+    this.isSelectedLink = !!event;
     this.linkElement = event;
   }
 
