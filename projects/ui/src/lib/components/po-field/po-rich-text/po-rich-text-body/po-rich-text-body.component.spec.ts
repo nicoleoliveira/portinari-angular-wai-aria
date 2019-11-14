@@ -268,22 +268,90 @@ describe('PoRichTextBodyComponent:', () => {
       expect(spyListener).toHaveBeenCalledWith('click', component['onAnchorClick']);
     });
 
-    it('cursorPositionedInALink: should return true if tag element is a link', () => {
+    it('isCursorPositionedInALink: should return true if tag element is a link', () => {
       const fakeSelection = { focusNode: { parentElement: { tagName: 'A' } } };
 
       spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
 
-      const expectedValue = component['cursorPositionedInALink']();
+      const expectedValue = component['isCursorPositionedInALink']();
 
       expect(expectedValue).toBe(true);
     });
 
-    it('cursorPositionedInALink: should return false if tag element isn`t a link', () => {
+    it(`isCursorPositionedInALink: should return true if browser is firefox and 'verifyCursorPositionInFirefoxIEEdge' return true`, () => {
       const fakeSelection = { focusNode: { parentElement: { tagName: 'B' } } };
 
       spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
+      spyOn(UtilsFunction, 'isFirefox').and.returnValue(true);
+      spyOn(component, <any>'verifyCursorPositionInFirefoxIEEdge').and.returnValue(true);
 
-      const expectedValue = component['cursorPositionedInALink']();
+      const expectedValue = component['isCursorPositionedInALink']();
+
+      expect(expectedValue).toBe(true);
+    });
+
+    it(`isCursorPositionedInALink: should return true if browser is IE and 'verifyCursorPositionInFirefoxIEEdge' return true`, () => {
+      const fakeSelection = { focusNode: { parentElement: { tagName: 'B' } } };
+
+      spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
+      spyOn(UtilsFunction, 'isIEOrEdge').and.returnValue(true);
+      spyOn(component, <any>'verifyCursorPositionInFirefoxIEEdge').and.returnValue(true);
+
+      const expectedValue = component['isCursorPositionedInALink']();
+
+      expect(expectedValue).toBe(true);
+    });
+
+    it(`isCursorPositionedInALink: should return true if not tag A, firefox and IE, but 'isParentNodeAnchor' return true`, () => {
+      const fakeSelection = { focusNode: { parentElement: { tagName: 'B' } } };
+
+      spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
+      spyOn(UtilsFunction, 'isIEOrEdge').and.returnValue(false);
+      spyOn(UtilsFunction, 'isFirefox').and.returnValue(false);
+      spyOn(component, <any>'isParentNodeAnchor').and.returnValue(true);
+
+      const expectedValue = component['isCursorPositionedInALink']();
+
+      expect(expectedValue).toBe(true);
+    });
+
+    it(`isCursorPositionedInALink: should return false if not tag A, firefox, IE  and 'isParentNodeAnchor' return false`, () => {
+      const fakeSelection = { focusNode: { parentElement: { tagName: 'B' } } };
+
+      spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
+      spyOn(UtilsFunction, 'isIEOrEdge').and.returnValue(false);
+      spyOn(UtilsFunction, 'isFirefox').and.returnValue(false);
+      spyOn(component, <any>'isParentNodeAnchor').and.returnValue(false);
+
+      const expectedValue = component['isCursorPositionedInALink']();
+
+      expect(expectedValue).toBe(false);
+    });
+
+    it(`isCursorPositionedInALink: should return false if browser is firefox and 'verifyCursorPositionInFirefoxIEEdge'
+      return false`, () => {
+
+      const fakeSelection = { focusNode: { parentElement: { tagName: 'B' } } };
+
+      spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
+      spyOn(UtilsFunction, 'isFirefox').and.returnValue(true);
+      spyOn(component, <any>'verifyCursorPositionInFirefoxIEEdge').and.returnValue(false);
+
+      const expectedValue = component['isCursorPositionedInALink']();
+
+      expect(expectedValue).toBe(false);
+    });
+
+    it(`isCursorPositionedInALink: should return false if browser is IE and 'verifyCursorPositionInFirefoxIEEdge'
+      return false`, () => {
+
+      const fakeSelection = { focusNode: { parentElement: { tagName: 'B' } } };
+
+      spyOn(document, 'getSelection').and.returnValue(<any>fakeSelection);
+      spyOn(UtilsFunction, 'isIEOrEdge').and.returnValue(true);
+      spyOn(component, <any>'verifyCursorPositionInFirefoxIEEdge').and.returnValue(false);
+
+      const expectedValue = component['isCursorPositionedInALink']();
 
       expect(expectedValue).toBe(false);
     });
@@ -313,7 +381,7 @@ describe('PoRichTextBodyComponent:', () => {
 
     it('emitSelectionCommands: should call `commands.emit`', () => {
       spyOn(component.commands, 'emit');
-      spyOn(component, <any>'cursorPositionedInALink');
+      spyOn(component, <any>'isCursorPositionedInALink');
 
       component['emitSelectionCommands']();
 
@@ -321,9 +389,9 @@ describe('PoRichTextBodyComponent:', () => {
     });
 
     it(`emitSelectionCommands: the object property 'commands'
-    should contain 'Createlink' if 'cursorPositionedInALink' returns 'true'`, () => {
+    should contain 'Createlink' if 'isCursorPositionedInALink' returns 'true'`, () => {
 
-      spyOn(component, <any>'cursorPositionedInALink').and.returnValue(true);
+      spyOn(component, <any>'isCursorPositionedInALink').and.returnValue(true);
       spyOn(document, 'queryCommandState').and.returnValue(false);
       spyOn(document, 'queryCommandValue').and.returnValue('rgb');
       spyOn(component, <any>'rgbToHex').and.returnValue('hex');
@@ -335,9 +403,37 @@ describe('PoRichTextBodyComponent:', () => {
     });
 
     it(`emitSelectionCommands: the object property 'commands'
-    shouldn't contain 'Createlink' if 'cursorPositionedInALink' returns 'false'`, () => {
+    should contain 'Createlink' if 'isCursorPositionedInALink' returns 'true'`, () => {
 
-      spyOn(component, <any>'cursorPositionedInALink').and.returnValue(false);
+      spyOn(component, <any>'isCursorPositionedInALink').and.returnValue(true);
+      spyOn(document, 'queryCommandState').and.returnValue(false);
+      spyOn(document, 'queryCommandValue').and.returnValue('rgb');
+      spyOn(component, <any>'rgbToHex').and.returnValue('hex');
+      spyOn(UtilsFunction, 'isIE').and.returnValue(false);
+      spyOn(component.commands, 'emit');
+
+      component['emitSelectionCommands']();
+
+      expect(component.commands.emit).toHaveBeenCalledWith({commands: ['Createlink'], hexColor: 'hex'});
+    });
+
+    it(`emitSelectionCommands: should call 'commands.emit' with 'hexColor' undefined if browser is IE`, () => {
+
+      spyOn(component, <any>'isCursorPositionedInALink').and.returnValue(true);
+      spyOn(document, 'queryCommandState').and.returnValue(false);
+      spyOn(document, 'queryCommandValue').and.returnValue('rgb');
+      spyOn(UtilsFunction, 'isIE').and.returnValue(true);
+      spyOn(component.commands, 'emit');
+
+      component['emitSelectionCommands']();
+
+      expect(component.commands.emit).toHaveBeenCalledWith({commands: ['Createlink'], hexColor: undefined });
+    });
+
+    it(`emitSelectionCommands: the object property 'commands'
+    shouldn't contain 'Createlink' if 'isCursorPositionedInALink' returns 'false'`, () => {
+
+      spyOn(component, <any>'isCursorPositionedInALink').and.returnValue(false);
       spyOn(document, 'queryCommandState').and.returnValue(false);
       spyOn(document, 'queryCommandValue').and.returnValue('rgb');
       spyOn(component, <any>'rgbToHex').and.returnValue('hex');
