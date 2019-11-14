@@ -883,7 +883,7 @@ describe('PoRichTextBodyComponent:', () => {
     it('isParentNodeAnchor: should return falsy if textSelection is undefined', () => {
       const textSelection = undefined;
 
-      const isParentNodeAnchor = component['isParentNodeAnchor'](<any> textSelection);
+      const isParentNodeAnchor = component['isParentNodeAnchor'](textSelection);
 
       expect(isParentNodeAnchor).toBeFalsy();
     });
