@@ -127,28 +127,6 @@ export class PoRichTextBodyComponent implements OnInit {
     });
   }
 
-  private isCursorPositionedInALink(): boolean {
-    const textSelection = document.getSelection();
-    const parent = textSelection.focusNode.parentElement;
-
-    this.linkElement = undefined;
-
-    let isLink = false;
-
-    if (parent && parent.tagName === 'A') {
-      this.linkElement = parent;
-      isLink = true;
-
-    } else if (isFirefox() || isIEOrEdge()) {
-      isLink = this.verifyCursorPositionInFirefoxIEEdge(textSelection);
-
-    } else {
-      isLink = this.isParentNodeAnchor(textSelection);
-    }
-
-    return isLink;
-  }
-
   private emitSelectionCommands() {
     const commands = poRichTextBodyCommands.filter(command => document.queryCommandState(command));
     const rgbColor = document.queryCommandValue('ForeColor');
@@ -197,13 +175,26 @@ export class PoRichTextBodyComponent implements OnInit {
     selectionRange.insertNode(elementLink);
   }
 
-  private isLinkForFirefoxOrEdge(textLink: any) {
-    return Array.from(this.bodyElement.nativeElement.querySelectorAll('a')).some(element => {
-      if (element['innerText'] && element['innerText'] === textLink) {
-        this.linkElement = element;
-        return true;
-      }
-    });
+  private isCursorPositionedInALink(): boolean {
+    const textSelection = document.getSelection();
+    const parent = textSelection.focusNode.parentElement;
+
+    this.linkElement = undefined;
+
+    let isLink = false;
+
+    if (parent && parent.tagName === 'A') {
+      this.linkElement = parent;
+      isLink = true;
+
+    } else if (isFirefox() || isIEOrEdge()) {
+      isLink = this.verifyCursorPositionInFirefoxIEEdge(textSelection);
+
+    } else {
+      isLink = this.isParentNodeAnchor(textSelection);
+    }
+
+    return isLink;
   }
 
   private isParentNodeAnchor(textSelection): boolean {
@@ -222,7 +213,6 @@ export class PoRichTextBodyComponent implements OnInit {
       }
 
       this.linkElement = undefined;
-      isLink = false;
       return isLink;
     }
   }
@@ -269,6 +259,15 @@ export class PoRichTextBodyComponent implements OnInit {
     return '#' + r + g + b;
   }
 
+  private searchForALinkInDOM(textLink: any) {
+    return Array.from(this.bodyElement.nativeElement.querySelectorAll('a')).some(element => {
+      if (element['innerText'] && element['innerText'] === textLink) {
+        this.linkElement = element;
+        return true;
+      }
+    });
+  }
+
   private toggleCursorOnLink(event: any, action: 'add' | 'remove') {
     const element = document.getSelection().focusNode.parentNode;
     const isCtrl = event.ctrlKey || event.key === 'Control';
@@ -307,22 +306,14 @@ export class PoRichTextBodyComponent implements OnInit {
       isLink = true;
 
     } else {
-      const textLink = textSelection.toString();
+      const textLink = textSelection.toString() || textSelection.anchorNode.data;
 
-      if (!isIE()) {
-        isLink = this.isLinkForFirefoxOrEdge(textLink);
-
-      } else {
-        const textSelected = textSelection.anchorNode.data;
-
-        if (textSelected !== null) {
-          isLink = this.isLinkForFirefoxOrEdge(textSelected);
-        }
+      if (textLink) {
+        isLink = this.searchForALinkInDOM(textLink);
       }
     }
 
     return isLink;
-
   }
 
 }
