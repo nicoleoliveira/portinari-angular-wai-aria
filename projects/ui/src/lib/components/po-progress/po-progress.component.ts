@@ -25,7 +25,14 @@ import { PoProgressStatus } from './enums/po-progress-status.enum';
 @Component({
   selector: 'po-progress',
   templateUrl: './po-progress.component.html',
-  changeDetection: ChangeDetectionStrategy.OnPush
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    role: 'progressbar',
+    'aria-valuemin': '0',
+    'aria-valuemax': '100',
+    '[attr.aria-valuenow]': 'value',
+    '[attr.aria-valuetext]': 'text',
+  }
 })
 export class PoProgressComponent extends PoProgressBaseComponent {
 

@@ -4,12 +4,6 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
   selector: 'po-progress-bar',
   templateUrl: './po-progress-bar.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    role: 'progressbar',
-    'aria-valuemin': '0',
-    'aria-valuemax': '100',
-    '[attr.aria-valuenow]': 'value',
-  }
 })
 export class PoProgressBarComponent {
 
