@@ -13,6 +13,7 @@ const poRichTextBodyCommands = [
 })
 export class PoRichTextBodyComponent implements OnInit {
 
+  private isLinkEditing: boolean;
   private linkElement: any;
   private timeoutChange: any;
   private valueBeforeChange: any;
@@ -62,6 +63,10 @@ export class PoRichTextBodyComponent implements OnInit {
 
     this.updateModel();
     this.value.emit(this.modelValue);
+  }
+
+  linkEditing(event) {
+    this.isLinkEditing = !!event;
   }
 
   onBlur() {
@@ -139,8 +144,8 @@ export class PoRichTextBodyComponent implements OnInit {
     if (this.isCursorPositionedInALink()) {
       commands.push('Createlink');
     }
-    this.selectedLink.emit(this.linkElement); // importante ficar fora do if para emitir mesmo undefined.
 
+    this.selectedLink.emit(this.linkElement); // importante ficar fora do if para emitir mesmo undefined.
     this.commands.emit({commands, hexColor});
   }
 
@@ -149,7 +154,7 @@ export class PoRichTextBodyComponent implements OnInit {
       this.insertHtmlLinkElement(urlLink, urlLinkText);
     } else {
       // '&nbsp;' necessário para o cursor não ficar preso dentro do link no Firefox.
-      const linkValue = isFirefox() ?
+      const linkValue = isFirefox() && !this.isLinkEditing ?
       `&nbsp;<a class="po-rich-text-link" href="${urlLink}" target="_blank">${urlLinkText || urlLink}</a>&nbsp;` :
       `<a class="po-rich-text-link" href="${urlLink}" target="_blank">${urlLinkText || urlLink}</a>`;
 
@@ -177,39 +182,57 @@ export class PoRichTextBodyComponent implements OnInit {
 
   private isCursorPositionedInALink(): boolean {
     const textSelection = document.getSelection();
-    const parent = textSelection.focusNode.parentElement;
+    const element = textSelection.focusNode.parentElement;
+    const node = textSelection.anchorNode.parentNode;
 
     this.linkElement = undefined;
 
     let isLink = false;
 
-    if (parent && parent.tagName === 'A') {
-      this.linkElement = parent;
+    if (element && element.tagName === 'A') {
+      this.linkElement = element;
       isLink = true;
 
-    } else if (isFirefox() || isIEOrEdge()) {
-      isLink = this.verifyCursorPositionInFirefoxIEEdge(textSelection);
+    } else if (node && node.nodeName === 'A') { // necessário para o IE
+      this.linkElement = node;
+      isLink = true;
+
+    } else if ((isFirefox() || isIEOrEdge()) && this.verifyCursorPositionInFirefoxIEEdge(textSelection)) {
+      isLink = true;
 
     } else {
       isLink = this.isParentNodeAnchor(textSelection);
     }
-
     return isLink;
   }
 
   private isParentNodeAnchor(textSelection): boolean {
-
     if (textSelection) {
       let isLink = false;
-      let parentElementHTML = textSelection.focusNode.parentElement;
+      let element = textSelection.focusNode.parentElement;
+      let node = textSelection.anchorNode.parentNode;
 
-      while (parentElementHTML && parentElementHTML.tagName !== null) {
-        if (parentElementHTML.tagName === 'A') {
-          this.linkElement = parentElementHTML;
-          isLink = true;
-          return isLink;
+      if (element) {
+
+        while (element && element.tagName !== null) {
+          if (element.tagName === 'A') {
+            this.linkElement = element;
+            isLink = true;
+            return isLink;
+          }
+          element = element.parentElement;
         }
-        parentElementHTML = parentElementHTML.parentElement;
+
+      } else if (node) { // necessário para o IE
+
+        while (node && node.nodeName !== null) {
+          if (node.nodeName === 'A') {
+            this.linkElement = node;
+            isLink = true;
+            return isLink;
+          }
+          node = node.parentNode;
+        }
       }
 
       this.linkElement = undefined;
@@ -259,14 +282,15 @@ export class PoRichTextBodyComponent implements OnInit {
     return '#' + r + g + b;
   }
 
-  private searchForALinkInDOM(textLink: any) {
-    return Array.from(this.bodyElement.nativeElement.querySelectorAll('a')).some(element => {
-      if (element['innerText'] && element['innerText'] === textLink) {
-        this.linkElement = element;
-        return true;
-      }
-    });
-  }
+  // private searchForALinkInDOM(textLink: any) {
+  //   console.log('só entra se for tipo range');
+  //   return Array.from(this.bodyElement.nativeElement.querySelectorAll('a')).some(element => {
+  //     if (element['innerText'] && element['innerText'] === textLink) {
+  //       this.linkElement = element;
+  //       return true;
+  //     }
+  //   });
+  // }
 
   private toggleCursorOnLink(event: any, action: 'add' | 'remove') {
     const element = document.getSelection().focusNode.parentNode;
@@ -299,16 +323,27 @@ export class PoRichTextBodyComponent implements OnInit {
 
   private verifyCursorPositionInFirefoxIEEdge(textSelection): boolean {
     const firstChild = textSelection.anchorNode.childNodes[0];
+    const nodeLink = textSelection.focusNode;
     let isLink = false;
 
     if (firstChild && firstChild.nodeName === 'A') {
+      console.log('1', textSelection);
       this.linkElement = firstChild;
       isLink = true;
 
-    } else {
-      const textLink = textSelection.toString() || textSelection.anchorNode.data;
+    } else if (nodeLink && nodeLink.nodeName === 'A') {
+      console.log('2', textSelection);
+      this.linkElement = nodeLink;
+      isLink = true;
 
-      isLink = !!textLink && this.searchForALinkInDOM(textLink);
+    } else {
+      console.log('3', textSelection);
+      const range = textSelection.getRangeAt(0);
+      const fragmentDocument = range.cloneContents();
+      const node = fragmentDocument.childNodes[0];
+
+      isLink = node ? node.nodeName === 'A' : false;
+      this.linkElement = isLink ? node : undefined;
     }
 
     return isLink;

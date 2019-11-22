@@ -92,6 +92,8 @@ export class PoRichTextModalComponent {
 
   @Output('p-command') command = new EventEmitter<string | { command: string, value: string | any }>();
 
+  @Output('p-link-editing') linkEditing = new EventEmitter<any>();
+
   constructor(private languageService: PoLanguageService) {}
 
   async convertToBase64() {
@@ -173,7 +175,7 @@ export class PoRichTextModalComponent {
   }
 
   private prepareModalForLink() {
-    this.saveSelectionTextRange();
+    this.saveSelectionText(); // linha incluida, verificar
     this.formReset(this.modalLinkForm.control);
 
     setTimeout(() => { this.formModelValidate(); });
@@ -182,6 +184,8 @@ export class PoRichTextModalComponent {
       this.isLinkEditing = true;
       this.setLinkEditableForModal();
     }
+
+    this.linkEditing.emit(this.isLinkEditing);
   }
 
   private restoreSelection() {
@@ -204,7 +208,7 @@ export class PoRichTextModalComponent {
     this.savedCursorPosition = [ this.selection.focusNode, this.selection.focusOffset ];
   }
 
-  private saveSelectionTextRange() {
+  private saveSelectionText() {
     if (this.selection.anchorNode !== null) {
       this.savedSelection = this.selection.getRangeAt(0);
       this.urlLinkText = this.selection.toString();
@@ -220,9 +224,9 @@ export class PoRichTextModalComponent {
 
   private toEditLink() {
     if (isIE()) {
-      this.linkElement.parentElement.removeChild(this.linkElement);
+      this.linkElement.parentNode.removeChild(this.linkElement);
     } else {
-      this.linkElement.remove();
+    this.linkElement.remove();
     }
 
     this.toInsertLink(this.urlLink, this.urlLinkText);
