@@ -6,16 +6,21 @@ import { RouterModule } from '@angular/router';
 import { PoModule } from '@portinari/portinari-ui';
 
 import { AppComponent } from './app.component';
+// tslint:disable-next-line: max-line-length
+import { SamplePoTreeViewFolderStructureComponent } from 'projects/ui/src/lib/components/po-tree-view/samples/sample-po-tree-view-folder-structure/sample-po-tree-view-folder-structure.component';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    SamplePoTreeViewFolderStructureComponent
   ],
   imports: [
     BrowserModule,
     FormsModule,
     RouterModule.forRoot([]),
-    PoModule
+    PoModule,
+    BrowserAnimationsModule
   ],
   bootstrap: [AppComponent]
 })
