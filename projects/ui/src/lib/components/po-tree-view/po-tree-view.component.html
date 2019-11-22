@@ -1,5 +1,5 @@
 <po-container *ngIf="hasItems" p-no-padding p-no-shadow>
-  <ul class="po-tree-view">
+  <ul class="po-tree-view" role="tree" aria-label="Minha árvore">
     <po-tree-view-item *ngFor="let item of items"
       [p-expanded]="item.expanded"
       [p-label]="item.label"

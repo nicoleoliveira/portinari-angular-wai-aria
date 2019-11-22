@@ -1,4 +1,9 @@
-<li class="po-tree-view-item">
+<li class="po-tree-view-item"
+  (click)="onClick($event)"
+  (keydown.enter)="onClick($event)"
+  role="treeitem"
+  tabindex="0"
+  (focus)="onFocus($event)">
 
   <po-tree-view-item-header
     [p-expanded]="expanded"
@@ -9,6 +14,7 @@
 
   <ul *ngIf="hasSubItems"
     class="po-tree-view-item-group"
+    role="group"
     [@toggleBody]="expanded ? 'expanded' : 'collapsed'">
 
     <po-tree-view-item *ngFor="let subItem of subItems"
