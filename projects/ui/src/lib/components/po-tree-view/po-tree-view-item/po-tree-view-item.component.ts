@@ -56,6 +56,17 @@ export class PoTreeViewItemComponent {
     const treeViewItem = this.getTreeViewItemObject();
 
     this.treeViewService.emitEvent(treeViewItem);
+    this.setAriaExpanded(event);
+  }
+
+  onFocus(event) {
+    this.setAriaExpanded(event);
+  }
+
+  private setAriaExpanded(event: any) {
+    if (this.hasSubItems) {
+      event.target.setAttribute('aria-expanded', !!this.expanded);
+    }
   }
 
   private getTreeViewItemObject() {

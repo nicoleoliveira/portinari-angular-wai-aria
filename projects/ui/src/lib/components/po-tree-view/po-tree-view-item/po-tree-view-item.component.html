@@ -3,7 +3,7 @@
   (keydown.enter)="onClick($event)"
   role="treeitem"
   tabindex="0"
-  [attr.aria-expanded]="expanded">
+  (focus)="onFocus($event)">
 
   <po-tree-view-item-header
     [p-expanded]="expanded"
